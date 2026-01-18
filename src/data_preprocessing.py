@@ -97,8 +97,8 @@ def impute_missing_values(df: pd.DataFrame) -> pd.DataFrame:
     """
     df = df.copy()
 
-    # Identify column types
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    # Identify column types (include all numeric types after memory reduction)
+    numerical_cols = df.select_dtypes(include=[np.number]).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object']).columns.tolist()
 
     # Remove target from numerical if present
