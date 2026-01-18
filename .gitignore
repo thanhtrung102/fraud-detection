@@ -1,5 +1,4 @@
-# Data files (download from Kaggle)
-data/*.csv
+# Data files
 data/*.zip
 
 # Model artifacts
