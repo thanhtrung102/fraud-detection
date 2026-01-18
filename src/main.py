@@ -5,16 +5,26 @@ Main Pipeline
 End-to-end fraud detection pipeline.
 """
 
+import sys
 import time
 import numpy as np
 from pathlib import Path
 
-from .data_preprocessing import preprocess_pipeline, load_config
-from .stacking_model import StackingFraudDetector, find_optimal_threshold
-from .evaluation import (
-    compute_metrics, print_results, generate_all_plots, save_results
-)
-from .explainability import generate_all_explanations
+# Support both: python src/main.py AND python -m src.main
+try:
+    from .data_preprocessing import preprocess_pipeline, load_config
+    from .stacking_model import StackingFraudDetector, find_optimal_threshold
+    from .evaluation import (
+        compute_metrics, print_results, generate_all_plots, save_results
+    )
+    from .explainability import generate_all_explanations
+except ImportError:
+    from data_preprocessing import preprocess_pipeline, load_config
+    from stacking_model import StackingFraudDetector, find_optimal_threshold
+    from evaluation import (
+        compute_metrics, print_results, generate_all_plots, save_results
+    )
+    from explainability import generate_all_explanations
 
 
 def main():
