@@ -7,6 +7,7 @@ data:
   train_identity: "data/train_identity.csv"
   test_size: 0.20
   random_state: 42
+  # sample_size: 100000  # Uncomment for low-memory environments (e.g., Codespaces)
 
 # Preprocessing
 preprocessing:

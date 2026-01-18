@@ -22,28 +22,65 @@ def load_config(config_path: str = "config/params.yaml") -> dict:
         return yaml.safe_load(f)
 
 
-def load_data(transaction_path: str, identity_path: str) -> pd.DataFrame:
+def reduce_memory(df: pd.DataFrame) -> pd.DataFrame:
+    """Reduce DataFrame memory by downcasting numeric types."""
+    for col in df.columns:
+        col_type = df[col].dtype
+        if col_type != object:
+            c_min, c_max = df[col].min(), df[col].max()
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+            else:
+                if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
+    return df
+
+
+def load_data(transaction_path: str, identity_path: str, sample_size: int = None) -> pd.DataFrame:
     """
     Load and merge transaction and identity data.
 
     Args:
         transaction_path: Path to transaction CSV
         identity_path: Path to identity CSV
+        sample_size: If set, sample this many rows (for low-memory environments)
 
     Returns:
         Merged DataFrame
     """
     print("Loading transaction data...")
     train_transaction = pd.read_csv(transaction_path)
+    train_transaction = reduce_memory(train_transaction)
 
     print("Loading identity data...")
     train_identity = pd.read_csv(identity_path)
+    train_identity = reduce_memory(train_identity)
 
     print("Merging datasets on TransactionID...")
     df = train_transaction.merge(train_identity, on='TransactionID', how='left')
 
+    # Sample if needed (for low-memory environments)
+    if sample_size and len(df) > sample_size:
+        print(f"Sampling {sample_size:,} rows (low-memory mode)...")
+        # Stratified sampling to preserve fraud ratio
+        fraud = df[df['isFraud'] == 1]
+        legit = df[df['isFraud'] == 0]
+        fraud_ratio = len(fraud) / len(df)
+        n_fraud = int(sample_size * fraud_ratio)
+        n_legit = sample_size - n_fraud
+        df = pd.concat([
+            fraud.sample(n=min(n_fraud, len(fraud)), random_state=42),
+            legit.sample(n=min(n_legit, len(legit)), random_state=42)
+        ]).sample(frac=1, random_state=42).reset_index(drop=True)
+
     print(f"Dataset shape: {df.shape}")
     print(f"Fraud rate: {df['isFraud'].mean()*100:.2f}%")
+    print(f"Memory usage: {df.memory_usage().sum()/1e6:.1f} MB")
 
     return df
 
@@ -166,10 +203,12 @@ def preprocess_pipeline(config: dict = None) -> tuple:
     if config is None:
         config = load_config()
 
-    # Load data
+    # Load data (with optional sampling for low-memory environments)
+    sample_size = config['data'].get('sample_size', None)
     df = load_data(
         config['data']['train_transaction'],
-        config['data']['train_identity']
+        config['data']['train_identity'],
+        sample_size=sample_size
     )
 
     # Preprocess
