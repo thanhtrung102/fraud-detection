@@ -1,5 +1,5 @@
-# Configuration for Fraud Detection Reproduction
-# Paper: Financial Fraud Detection Using Explainable AI and Stacking Ensemble Methods
+# Configuration for Credit Card Fraud Detection
+# Stacking Ensemble with Explainable AI
 
 # Data Configuration
 data:
@@ -26,7 +26,7 @@ feature_selection:
 
 # Optuna Hyperparameter Tuning
 optuna:
-  n_trials: 20
+  n_trials: 50
   direction: "maximize"
   metric: "roc_auc"
   cv_folds: 5
@@ -64,7 +64,9 @@ xgboost_search_space:
 # Base Models Configuration
 base_models:
   xgboost:
-    # Parameters will be set by Optuna
+    n_estimators: 300
+    max_depth: 7
+    learning_rate: 0.1
     random_state: 42
 
   lightgbm:
@@ -95,7 +97,7 @@ threshold:
     start: 0.30
     end: 0.60
     step: 0.01
-  default: 0.44  # Paper's optimal threshold
+  default: 0.44
 
 # Cross-Validation
 cross_validation:
@@ -109,11 +111,3 @@ output:
   models_dir: "models"
   save_models: true
   save_shap_values: true
-
-# Target Metrics (from paper)
-target_metrics:
-  accuracy: 0.99
-  precision: 0.99
-  recall: 0.99
-  f1_score: 0.99
-  auc_roc: 0.99

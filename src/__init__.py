@@ -1,18 +1,16 @@
 """
-Fraud Detection Reproduction Package
-=====================================
+Fraud Detection Package
+=======================
 
-Reproduction of: "Financial Fraud Detection Using Explainable AI
-and Stacking Ensemble Methods" (arXiv:2505.10050)
+A high-performance credit card fraud detection system using
+stacking ensemble methods and explainable AI.
 
 Modules:
-    - data_preprocessing: Data loading, cleaning, and SMOTE
-    - feature_selection: SHAP-based feature selection
-    - hyperparameter_tuning: Optuna optimization
-    - stacking_model: Stacking ensemble implementation
+    - data_preprocessing: Data loading, cleaning, and SMOTE balancing
+    - stacking_model: XGBoost + LightGBM + CatBoost stacking ensemble
     - evaluation: Metrics computation and visualization
     - explainability: SHAP, LIME, and PDP analysis
 """
 
-__version__ = "0.1.0"
-__author__ = "Reproduction Study"
+__version__ = "1.0.0"
+__author__ = "thanhtrung102"
