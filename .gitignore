@@ -1,0 +1,66 @@
+# Data files (download from Kaggle)
+data/*.csv
+data/*.zip
+
+# Model artifacts
+models/
+*.joblib
+*.pkl
+*.h5
+
+# Environment
+fraud_detection_env/
+venv/
+.env
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Kaggle credentials (NEVER commit)
+kaggle.json
+
+# Results (optional - may want to track)
+# results/
+
+# Logs
+*.log
+logs/
+
+# Optuna
+*.db
+optuna_study.db

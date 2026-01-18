@@ -1,0 +1,3 @@
+# Download data from Kaggle:
+# kaggle competitions download -c ieee-fraud-detection
+# Then extract to this directory
