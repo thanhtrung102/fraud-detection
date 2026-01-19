@@ -38,8 +38,24 @@ cd fraud-detection
 # Install dependencies
 pip install -r requirements.txt
 
-# Run the pipeline
-python src/main.py
+# Run the full pipeline (with SHAP feature selection + Optuna tuning)
+python -m src.main
+```
+
+### Pipeline Options
+
+```bash
+# Full pipeline (SHAP + Optuna) - Recommended for best results
+python -m src.main
+
+# Skip Optuna tuning (faster, uses config defaults)
+python -m src.main --no-optuna
+
+# Skip SHAP feature selection (use all features)
+python -m src.main --no-feature-selection
+
+# Quick run (skip both)
+python -m src.main --no-optuna --no-feature-selection
 ```
 
 ### Production Mode (Replicate Paper Results)
@@ -50,8 +66,8 @@ For machines with **4 cores, 16GB RAM, 32GB storage**:
 # Copy production config (300K samples, optimized for paper results)
 cp config/params_production.yaml config/params.yaml
 
-# Run the pipeline
-python src/main.py
+# Run full pipeline with Optuna tuning (20 trials)
+python -m src.main
 ```
 
 **Target Metrics:** 99% Accuracy, 0.99 AUC-ROC (as per [arXiv:2505.10050](https://arxiv.org/html/2505.10050v1))
@@ -66,8 +82,8 @@ For Codespaces (limited to 8GB RAM):
 # Copy Codespaces config (100K samples)
 cp config/params_codespaces.yaml config/params.yaml
 
-# Run the pipeline
-python src/main.py
+# Run pipeline (skip Optuna for faster execution)
+python -m src.main --no-optuna
 ```
 
 ---
@@ -96,6 +112,12 @@ python src/main.py
                       │
                       ▼
 ┌─────────────────────────────────────────────────────────────────┐
+│              Optuna Hyperparameter Tuning                        │
+│     20 trials per model, 5-fold CV, optimizing AUC-ROC          │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
 │                  Stacking Ensemble                               │
 │  ┌───────────┐  ┌───────────┐  ┌───────────┐                    │
 │  │  XGBoost  │  │ LightGBM  │  │ CatBoost  │   Base Learners    │
@@ -107,6 +129,12 @@ python src/main.py
 │               │    XGBoost    │  Meta-Learner                    │
 │               │  Meta-Learner │                                  │
 │               └───────────────┘                                  │
+└─────────────────────┬───────────────────────────────────────────┘
+                      │
+                      ▼
+┌─────────────────────────────────────────────────────────────────┐
+│              Success Metrics Validation                          │
+│         Validate against paper targets (99% accuracy)            │
 └─────────────────────┬───────────────────────────────────────────┘
                       │
                       ▼
@@ -157,60 +185,82 @@ unzip ieee-fraud-detection.zip -d data/
 
 ## Usage
 
-### Full Pipeline
+### Full Pipeline (Recommended)
+
+```bash
+# Run the complete pipeline with all optimizations
+python -m src.main
+```
+
+The pipeline runs 6 phases:
+1. **Data Preprocessing**: Load, impute, encode, split, and SMOTE balance
+2. **SHAP Feature Selection**: Select top 30 most important features
+3. **Optuna Tuning**: 20 trials per model optimizing AUC-ROC
+4. **Model Training**: Train stacking ensemble with tuned hyperparameters
+5. **Prediction**: Generate predictions with optimized threshold
+6. **Evaluation**: Compute metrics and validate against paper targets
+
+### Programmatic Usage
 
 ```python
 from src.data_preprocessing import preprocess_pipeline
+from src.feature_selection import shap_feature_selection, apply_feature_selection
+from src.optuna_tuning import tune_all_models
 from src.stacking_model import StackingFraudDetector
 from src.evaluation import compute_metrics, print_results
 
 # Load and preprocess data
 X_train, X_test, y_train, y_test, features = preprocess_pipeline()
 
-# Train model
-model = StackingFraudDetector()
-model.fit(X_train, y_train)
+# SHAP Feature Selection (top 30 features)
+indices, selected_features, importance = shap_feature_selection(
+    X_train, y_train, features, n_top_features=30
+)
+X_train_selected = apply_feature_selection(X_train, indices)
+X_test_selected = apply_feature_selection(X_test, indices)
+
+# Optuna Hyperparameter Tuning (20 trials)
+best_params = tune_all_models(X_train_selected, y_train, n_trials=20)
+
+# Train model with optimized parameters
+model = StackingFraudDetector(
+    xgb_params=best_params['xgboost'],
+    lgbm_params=best_params['lightgbm'],
+    catboost_params=best_params['catboost']
+)
+model.fit(X_train_selected, y_train)
 
 # Evaluate
-y_proba = model.predict_proba(X_test)[:, 1]
-y_pred = model.predict(X_test, threshold=0.44)
+y_proba = model.predict_proba(X_test_selected)[:, 1]
+y_pred = model.predict(X_test_selected, threshold=0.44)
 
 metrics = compute_metrics(y_test, y_pred, y_proba)
 print_results(metrics)
 ```
 
-### Hyperparameter Tuning
+### Hyperparameter Tuning Only
 
 ```python
-import optuna
-from xgboost import XGBClassifier
-from sklearn.model_selection import cross_val_score
+from src.optuna_tuning import tune_xgboost, tune_lightgbm, tune_catboost
 
-def objective(trial):
-    params = {
-        'n_estimators': trial.suggest_int('n_estimators', 100, 500),
-        'max_depth': trial.suggest_int('max_depth', 3, 10),
-        'learning_rate': trial.suggest_float('learning_rate', 0.01, 0.3),
-        'subsample': trial.suggest_float('subsample', 0.6, 1.0),
-        'colsample_bytree': trial.suggest_float('colsample_bytree', 0.6, 1.0),
-    }
-
-    model = XGBClassifier(**params, random_state=42)
-    scores = cross_val_score(model, X_train, y_train, cv=5, scoring='roc_auc')
-    return scores.mean()
-
-study = optuna.create_study(direction='maximize')
-study.optimize(objective, n_trials=50)
+# Tune individual models
+xgb_params = tune_xgboost(X_train, y_train, n_trials=20)
+lgbm_params = tune_lightgbm(X_train, y_train, n_trials=20)
+catboost_params = tune_catboost(X_train, y_train, n_trials=20)
 ```
 
-### Feature Selection
+### Feature Selection Only
 
 ```python
-from src.explainability import compute_shap_values, get_top_features_shap
+from src.feature_selection import shap_feature_selection
 
 # Get SHAP-based feature importance
-explainer, shap_values = compute_shap_values(model, X_train)
-top_features = get_top_features_shap(shap_values, feature_names, n_top=30)
+indices, names, importance_df = shap_feature_selection(
+    X_train, y_train, feature_names, n_top_features=30
+)
+
+# View top features
+print(importance_df.head(10))
 ```
 
 ---
@@ -306,16 +356,21 @@ fraud-detection/
 ├── .gitignore
 │
 ├── config/
-│   └── params.yaml           # Hyperparameter configurations
+│   ├── params.yaml            # Default configuration
+│   ├── params_production.yaml # Production config (16GB RAM)
+│   └── params_codespaces.yaml # GitHub Codespaces config (8GB RAM)
 │
-├── data/                     # Dataset (download from Kaggle)
+├── data/                      # Dataset (download from Kaggle)
 │   ├── train_transaction.csv
 │   ├── train_identity.csv
 │   └── ...
 │
 ├── src/
 │   ├── __init__.py
+│   ├── main.py                # Main pipeline entry point
 │   ├── data_preprocessing.py  # Data loading & preprocessing
+│   ├── feature_selection.py   # SHAP-based feature selection
+│   ├── optuna_tuning.py       # Hyperparameter optimization
 │   ├── stacking_model.py      # Stacking ensemble implementation
 │   ├── evaluation.py          # Metrics & visualization
 │   └── explainability.py      # SHAP, LIME, PDP analysis
@@ -330,8 +385,14 @@ fraud-detection/
 │   ├── shap_summary.png
 │   └── lime_explanation.html
 │
-└── tests/
-    └── test_pipeline.py
+├── models/                    # Saved model files
+│   ├── xgb_model.joblib
+│   ├── lgbm_model.joblib
+│   ├── catboost_model.joblib
+│   └── meta_learner.joblib
+│
+└── .devcontainer/
+    └── devcontainer.json      # GitHub Codespaces configuration
 ```
 
 ---
@@ -341,29 +402,47 @@ fraud-detection/
 All hyperparameters are managed in `config/params.yaml`:
 
 ```yaml
-# Model Configuration
-base_models:
-  xgboost:
-    n_estimators: 300
-    max_depth: 7
-    learning_rate: 0.1
+# Data Configuration
+data:
+  sample_size: 300000  # Adjust based on available RAM
 
-  lightgbm:
-    n_estimators: 300
-    max_depth: 7
-    learning_rate: 0.1
-
-  catboost:
-    iterations: 300
-    depth: 7
-    learning_rate: 0.1
-
-# Feature Selection
+# SHAP Feature Selection (as per paper)
 feature_selection:
   method: shap
   n_top_features: 30
+  shap_sample_size: 50000
 
-# Classification Threshold
+# Optuna Hyperparameter Tuning (as per paper - 20 trials)
+optuna:
+  n_trials: 20
+  direction: maximize
+  metric: roc_auc
+  cv_folds: 5
+
+# Base Models (defaults, can be overridden by Optuna)
+base_models:
+  xgboost:
+    n_estimators: 400
+    max_depth: 8
+    learning_rate: 0.1
+
+  lightgbm:
+    n_estimators: 400
+    max_depth: 8
+    learning_rate: 0.1
+
+  catboost:
+    iterations: 400
+    depth: 8
+    learning_rate: 0.1
+
+# Meta-Learner (XGBoost as per paper)
+meta_learner:
+  n_estimators: 200
+  max_depth: 5
+  learning_rate: 0.1
+
+# Classification Threshold (paper found 0.44 optimal)
 threshold:
   default: 0.44
 ```

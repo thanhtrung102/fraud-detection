@@ -63,3 +63,6 @@ logs/
 # Optuna
 *.db
 optuna_study.db
+
+# CatBoost
+catboost_info/
