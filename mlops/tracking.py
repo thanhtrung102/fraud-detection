@@ -14,8 +14,7 @@ from mlflow.tracking import MlflowClient
 
 
 def setup_mlflow(
-    tracking_uri: str = "sqlite:///mlflow.db",
-    experiment_name: str = "fraud-detection"
+    tracking_uri: str = "sqlite:///mlflow.db", experiment_name: str = "fraud-detection"
 ) -> str:
     """
     Set up MLflow tracking.
@@ -33,8 +32,7 @@ def setup_mlflow(
     experiment = mlflow.get_experiment_by_name(experiment_name)
     if experiment is None:
         experiment_id = mlflow.create_experiment(
-            experiment_name,
-            tags={"project": "fraud-detection", "version": "1.0"}
+            experiment_name, tags={"project": "fraud-detection", "version": "1.0"}
         )
     else:
         experiment_id = experiment.experiment_id
@@ -112,9 +110,7 @@ def log_figure(fig, filename: str) -> None:
 
 
 def start_run(
-    run_name: Optional[str] = None,
-    tags: Optional[dict[str, str]] = None,
-    nested: bool = False
+    run_name: Optional[str] = None, tags: Optional[dict[str, str]] = None, nested: bool = False
 ) -> mlflow.ActiveRun:
     """
     Start an MLflow run.
@@ -146,7 +142,7 @@ def log_training_run(
     model_path: str,
     artifacts_dir: Optional[str] = None,
     run_name: Optional[str] = None,
-    tags: Optional[dict[str, str]] = None
+    tags: Optional[dict[str, str]] = None,
 ) -> str:
     """
     Log a complete training run to MLflow.
@@ -185,9 +181,7 @@ def log_training_run(
 
 
 def get_best_run(
-    experiment_name: str,
-    metric: str = "auc_roc",
-    ascending: bool = False
+    experiment_name: str, metric: str = "auc_roc", ascending: bool = False
 ) -> Optional[dict[str, Any]]:
     """
     Get the best run from an experiment.
@@ -211,7 +205,7 @@ def get_best_run(
         experiment_ids=[experiment.experiment_id],
         filter_string="",
         order_by=[f"metrics.{metric} {order}"],
-        max_results=1
+        max_results=1,
     )
 
     if not runs:
@@ -222,14 +216,12 @@ def get_best_run(
         "run_id": best_run.info.run_id,
         "metrics": best_run.data.metrics,
         "params": best_run.data.params,
-        "artifacts_uri": best_run.info.artifact_uri
+        "artifacts_uri": best_run.info.artifact_uri,
     }
 
 
 def compare_runs(
-    experiment_name: str,
-    metrics: Optional[list[str]] = None,
-    max_runs: int = 10
+    experiment_name: str, metrics: Optional[list[str]] = None, max_runs: int = 10
 ) -> list[dict[str, Any]]:
     """
     Compare multiple runs from an experiment.
@@ -251,10 +243,7 @@ def compare_runs(
     if experiment is None:
         return []
 
-    runs = client.search_runs(
-        experiment_ids=[experiment.experiment_id],
-        max_results=max_runs
-    )
+    runs = client.search_runs(experiment_ids=[experiment.experiment_id], max_results=max_runs)
 
     comparisons = []
     for run in runs:

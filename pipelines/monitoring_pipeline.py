@@ -47,19 +47,14 @@ def load_production_data(production_path: str) -> pd.DataFrame:
 
 @task(name="check_data_drift")
 def check_data_drift(
-    reference_data: pd.DataFrame,
-    production_data: pd.DataFrame,
-    drift_threshold: float = 0.5
+    reference_data: pd.DataFrame, production_data: pd.DataFrame, drift_threshold: float = 0.5
 ) -> dict[str, Any]:
     """Check for data drift between reference and production data."""
     logger = get_run_logger()
     logger.info("Checking for data drift...")
 
     monitor = FraudMonitor(reference_data)
-    drift_result = monitor.check_drift_threshold(
-        production_data,
-        drift_threshold=drift_threshold
-    )
+    drift_result = monitor.check_drift_threshold(production_data, drift_threshold=drift_threshold)
 
     if drift_result["alert"]:
         logger.warning(f"DATA DRIFT DETECTED: {drift_result['alerts']}")
@@ -71,9 +66,7 @@ def check_data_drift(
 
 @task(name="generate_drift_report")
 def generate_drift_report(
-    reference_data: pd.DataFrame,
-    production_data: pd.DataFrame,
-    output_dir: str
+    reference_data: pd.DataFrame, production_data: pd.DataFrame, output_dir: str
 ) -> str:
     """Generate detailed drift report."""
     logger = get_run_logger()
@@ -85,8 +78,7 @@ def generate_drift_report(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     report, metrics = monitor.generate_data_drift_report(
-        production_data,
-        output_path=str(output_path)
+        production_data, output_path=str(output_path)
     )
 
     logger.info(f"Drift report saved to {output_path}")
@@ -95,9 +87,7 @@ def generate_drift_report(
 
 @task(name="generate_performance_report")
 def generate_performance_report(
-    reference_data: pd.DataFrame,
-    production_data: pd.DataFrame,
-    output_dir: str
+    reference_data: pd.DataFrame, production_data: pd.DataFrame, output_dir: str
 ) -> str:
     """Generate model performance report."""
     logger = get_run_logger()
@@ -109,8 +99,7 @@ def generate_performance_report(
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     report, metrics = monitor.generate_model_performance_report(
-        production_data,
-        output_path=str(output_path)
+        production_data, output_path=str(output_path)
     )
 
     logger.info(f"Performance report saved to {output_path}")
@@ -150,10 +139,7 @@ def send_alert(drift_result: dict[str, Any], alert_config: dict[str, Any]) -> No
 
 
 @task(name="save_monitoring_metrics")
-def save_monitoring_metrics(
-    drift_result: dict[str, Any],
-    output_dir: str
-) -> str:
+def save_monitoring_metrics(drift_result: dict[str, Any], output_dir: str) -> str:
     """Save monitoring metrics to JSON."""
     logger = get_run_logger()
 
@@ -174,7 +160,7 @@ def monitoring_flow(
     production_path: str,
     output_dir: str = "monitoring/evidently_reports",
     drift_threshold: float = 0.5,
-    alert_config: Optional[dict[str, Any]] = None
+    alert_config: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """
     Model monitoring pipeline flow.
@@ -199,18 +185,10 @@ def monitoring_flow(
     production_data = load_production_data(production_path)
 
     # Check drift
-    drift_result = check_data_drift(
-        reference_data,
-        production_data,
-        drift_threshold
-    )
+    drift_result = check_data_drift(reference_data, production_data, drift_threshold)
 
     # Generate reports
-    drift_report_path = generate_drift_report(
-        reference_data,
-        production_data,
-        output_dir
-    )
+    drift_report_path = generate_drift_report(reference_data, production_data, output_dir)
 
     # Save metrics
     metrics_path = save_monitoring_metrics(drift_result, output_dir)
@@ -225,7 +203,7 @@ def monitoring_flow(
         "drift_share": drift_result["drift_share"],
         "drifted_features": drift_result["drifted_features"],
         "drift_report": drift_report_path,
-        "metrics_path": metrics_path
+        "metrics_path": metrics_path,
     }
 
 
@@ -242,8 +220,8 @@ def create_monitoring_deployment():
         parameters={
             "reference_path": "data/reference_data.csv",
             "production_path": "data/production_data.csv",
-            "drift_threshold": 0.5
-        }
+            "drift_threshold": 0.5,
+        },
     )
 
     return deployment
@@ -257,20 +235,24 @@ if __name__ == "__main__":
     np.random.seed(42)
     n_samples = 1000
 
-    reference = pd.DataFrame({
-        "feature1": np.random.normal(0, 1, n_samples),
-        "feature2": np.random.normal(5, 2, n_samples),
-        "isFraud": np.random.binomial(1, 0.035, n_samples),
-        "prediction": np.random.binomial(1, 0.04, n_samples)
-    })
+    reference = pd.DataFrame(
+        {
+            "feature1": np.random.normal(0, 1, n_samples),
+            "feature2": np.random.normal(5, 2, n_samples),
+            "isFraud": np.random.binomial(1, 0.035, n_samples),
+            "prediction": np.random.binomial(1, 0.04, n_samples),
+        }
+    )
 
     # Create sample production data with some drift
-    production = pd.DataFrame({
-        "feature1": np.random.normal(0.3, 1.1, n_samples),  # Slight drift
-        "feature2": np.random.normal(5, 2, n_samples),
-        "isFraud": np.random.binomial(1, 0.04, n_samples),
-        "prediction": np.random.binomial(1, 0.05, n_samples)
-    })
+    production = pd.DataFrame(
+        {
+            "feature1": np.random.normal(0.3, 1.1, n_samples),  # Slight drift
+            "feature2": np.random.normal(5, 2, n_samples),
+            "isFraud": np.random.binomial(1, 0.04, n_samples),
+            "prediction": np.random.binomial(1, 0.05, n_samples),
+        }
+    )
 
     # Save sample data
     Path("data").mkdir(exist_ok=True)
@@ -281,7 +263,7 @@ if __name__ == "__main__":
     result = monitoring_flow(
         reference_path="data/sample_reference.csv",
         production_path="data/sample_production.csv",
-        drift_threshold=0.3
+        drift_threshold=0.3,
     )
 
     print("\nMonitoring Results:")

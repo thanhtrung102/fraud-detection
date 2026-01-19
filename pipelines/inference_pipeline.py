@@ -48,10 +48,7 @@ def load_inference_data(data_path: str) -> pd.DataFrame:
 
 
 @task(name="preprocess_inference_data")
-def preprocess_inference_data(
-    df: pd.DataFrame,
-    feature_names: list[str]
-) -> np.ndarray:
+def preprocess_inference_data(df: pd.DataFrame, feature_names: list[str]) -> np.ndarray:
     """Preprocess data for inference."""
     logger = get_run_logger()
 
@@ -72,9 +69,7 @@ def preprocess_inference_data(
 
 @task(name="run_inference")
 def run_inference(
-    model: StackingFraudDetector,
-    X: np.ndarray,
-    threshold: float = 0.44
+    model: StackingFraudDetector, X: np.ndarray, threshold: float = 0.44
 ) -> dict[str, np.ndarray]:
     """Run inference on data."""
     logger = get_run_logger()
@@ -89,18 +84,11 @@ def run_inference(
 
     logger.info(f"Predictions: {n_fraud} fraud ({fraud_rate:.2%})")
 
-    return {
-        "probabilities": y_proba,
-        "predictions": y_pred
-    }
+    return {"probabilities": y_proba, "predictions": y_pred}
 
 
 @task(name="save_predictions")
-def save_predictions(
-    df: pd.DataFrame,
-    predictions: dict[str, np.ndarray],
-    output_path: str
-) -> str:
+def save_predictions(df: pd.DataFrame, predictions: dict[str, np.ndarray], output_path: str) -> str:
     """Save predictions to file."""
     logger = get_run_logger()
 
@@ -119,8 +107,7 @@ def save_predictions(
 
 @task(name="generate_inference_report")
 def generate_inference_report(
-    predictions: dict[str, np.ndarray],
-    output_dir: str = "results"
+    predictions: dict[str, np.ndarray], output_dir: str = "results"
 ) -> dict[str, Any]:
     """Generate inference summary report."""
     logger = get_run_logger()
@@ -138,13 +125,16 @@ def generate_inference_report(
         "max_fraud_probability": float(y_proba.max()),
         "high_risk_count": int((y_proba > 0.8).sum()),
         "medium_risk_count": int(((y_proba > 0.5) & (y_proba <= 0.8)).sum()),
-        "low_risk_count": int((y_proba <= 0.5).sum())
+        "low_risk_count": int((y_proba <= 0.5).sum()),
     }
 
     # Save report
     import json
+
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    report_path = Path(output_dir) / f"inference_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    report_path = (
+        Path(output_dir) / f"inference_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    )
 
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
@@ -159,7 +149,7 @@ def inference_flow(
     model_dir: str = "models",
     output_path: Optional[str] = None,
     feature_names: Optional[list[str]] = None,
-    threshold: float = 0.44
+    threshold: float = 0.44,
 ) -> dict[str, Any]:
     """
     Batch inference pipeline flow.
@@ -179,7 +169,7 @@ def inference_flow(
 
     # Set default output path
     if output_path is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = f"results/predictions_{timestamp}.csv"
 
     # Load model
@@ -192,7 +182,9 @@ def inference_flow(
     if feature_names is None:
         # Try to load from config or use all numeric columns
         config = load_config()
-        feature_names = config.get("feature_names", df.select_dtypes(include=[np.number]).columns.tolist())
+        feature_names = config.get(
+            "feature_names", df.select_dtypes(include=[np.number]).columns.tolist()
+        )
 
     # Preprocess
     X = preprocess_inference_data(df, feature_names)
@@ -208,19 +200,13 @@ def inference_flow(
 
     logger.info("Inference pipeline complete")
 
-    return {
-        "output_path": output_path,
-        "report": report,
-        "total_processed": len(df)
-    }
+    return {"output_path": output_path, "report": report, "total_processed": len(df)}
 
 
 if __name__ == "__main__":
     # Example usage
     result = inference_flow(
-        data_path="data/test_transactions.csv",
-        model_dir="models",
-        threshold=0.44
+        data_path="data/test_transactions.csv", model_dir="models", threshold=0.44
     )
 
     print("\nInference Results:")

@@ -32,7 +32,7 @@ class ModelRegistry:
         model_path: str = "model",
         model_name: Optional[str] = None,
         tags: Optional[dict[str, str]] = None,
-        description: Optional[str] = None
+        description: Optional[str] = None,
     ) -> str:
         """
         Register a model from an MLflow run.
@@ -62,9 +62,7 @@ class ModelRegistry:
         # Add description if provided
         if description:
             self.client.update_model_version(
-                name=model_name,
-                version=version,
-                description=description
+                name=model_name, version=version, description=description
             )
 
         print(f"Registered model '{model_name}' version {version}")
@@ -75,7 +73,7 @@ class ModelRegistry:
         version: str,
         stage: str,
         model_name: Optional[str] = None,
-        archive_existing: bool = True
+        archive_existing: bool = True,
     ) -> None:
         """
         Transition a model version to a new stage.
@@ -92,14 +90,12 @@ class ModelRegistry:
             name=model_name,
             version=version,
             stage=stage,
-            archive_existing_versions=archive_existing
+            archive_existing_versions=archive_existing,
         )
         print(f"Transitioned model '{model_name}' v{version} to {stage}")
 
     def get_latest_version(
-        self,
-        stage: Optional[str] = None,
-        model_name: Optional[str] = None
+        self, stage: Optional[str] = None, model_name: Optional[str] = None
     ) -> Optional[dict[str, Any]]:
         """
         Get the latest model version.
@@ -129,7 +125,7 @@ class ModelRegistry:
                 "run_id": latest.run_id,
                 "source": latest.source,
                 "status": latest.status,
-                "description": latest.description
+                "description": latest.description,
             }
         except MlflowException:
             return None
@@ -151,11 +147,7 @@ class ModelRegistry:
             return f"models:/{model_name}/Production"
         return None
 
-    def load_model(
-        self,
-        stage: str = "Production",
-        model_name: Optional[str] = None
-    ):
+    def load_model(self, stage: str = "Production", model_name: Optional[str] = None):
         """
         Load a model from the registry.
 
@@ -172,9 +164,7 @@ class ModelRegistry:
         return mlflow.pyfunc.load_model(model_uri)
 
     def list_versions(
-        self,
-        model_name: Optional[str] = None,
-        max_results: int = 10
+        self, model_name: Optional[str] = None, max_results: int = 10
     ) -> list[dict[str, Any]]:
         """
         List all versions of a model.
@@ -193,22 +183,20 @@ class ModelRegistry:
 
             result = []
             for v in versions[:max_results]:
-                result.append({
-                    "version": v.version,
-                    "stage": v.current_stage,
-                    "run_id": v.run_id,
-                    "status": v.status,
-                    "creation_timestamp": v.creation_timestamp
-                })
+                result.append(
+                    {
+                        "version": v.version,
+                        "stage": v.current_stage,
+                        "run_id": v.run_id,
+                        "status": v.status,
+                        "creation_timestamp": v.creation_timestamp,
+                    }
+                )
             return result
         except MlflowException:
             return []
 
-    def delete_version(
-        self,
-        version: str,
-        model_name: Optional[str] = None
-    ) -> None:
+    def delete_version(self, version: str, model_name: Optional[str] = None) -> None:
         """
         Delete a model version.
 
@@ -220,12 +208,7 @@ class ModelRegistry:
         self.client.delete_model_version(name=model_name, version=version)
         print(f"Deleted model '{model_name}' version {version}")
 
-    def set_model_alias(
-        self,
-        alias: str,
-        version: str,
-        model_name: Optional[str] = None
-    ) -> None:
+    def set_model_alias(self, alias: str, version: str, model_name: Optional[str] = None) -> None:
         """
         Set an alias for a model version.
 
@@ -243,7 +226,7 @@ def register_best_model(
     experiment_name: str,
     metric: str = "auc_roc",
     model_name: str = "fraud-detection-model",
-    stage: str = "Staging"
+    stage: str = "Staging",
 ) -> Optional[str]:
     """
     Register the best model from an experiment.
@@ -268,7 +251,7 @@ def register_best_model(
     version = registry.register_model(
         run_id=best_run["run_id"],
         model_name=model_name,
-        description=f"Best model by {metric}: {best_run['metrics'].get(metric, 'N/A')}"
+        description=f"Best model by {metric}: {best_run['metrics'].get(metric, 'N/A')}",
     )
 
     registry.transition_model_stage(version, stage, model_name)

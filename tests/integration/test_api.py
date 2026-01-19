@@ -20,6 +20,7 @@ class TestAPIEndpoints:
     def client(self):
         """Create test client."""
         from deployment.api.main import app
+
         return TestClient(app)
 
     def test_health_endpoint(self, client):
@@ -42,12 +43,8 @@ class TestAPIEndpoints:
         # This test may fail if model is not loaded
         # but it tests the API structure
         payload = {
-            "transaction": {
-                "TransactionAmt": 100.0,
-                "card1": 1234,
-                "C14": 1.0
-            },
-            "threshold": 0.5
+            "transaction": {"TransactionAmt": 100.0, "card1": 1234, "C14": 1.0},
+            "threshold": 0.5,
         }
 
         response = client.post("/predict", json=payload)
@@ -58,11 +55,8 @@ class TestAPIEndpoints:
     def test_predict_batch_endpoint_structure(self, client):
         """Test batch predict endpoint accepts correct structure."""
         payload = {
-            "transactions": [
-                {"TransactionAmt": 100.0},
-                {"TransactionAmt": 200.0}
-            ],
-            "threshold": 0.5
+            "transactions": [{"TransactionAmt": 100.0}, {"TransactionAmt": 200.0}],
+            "threshold": 0.5,
         }
 
         response = client.post("/predict/batch", json=payload)
@@ -78,10 +72,7 @@ class TestAPIEndpoints:
 
     def test_invalid_threshold(self, client):
         """Test that invalid threshold is rejected."""
-        payload = {
-            "transaction": {"TransactionAmt": 100.0},
-            "threshold": 1.5  # Invalid: > 1
-        }
+        payload = {"transaction": {"TransactionAmt": 100.0}, "threshold": 1.5}  # Invalid: > 1
 
         response = client.post("/predict", json=payload)
 
@@ -96,18 +87,11 @@ class TestAPISchemas:
         from deployment.api.schemas import TransactionFeatures
 
         # Valid transaction
-        transaction = TransactionFeatures(
-            TransactionAmt=100.0,
-            card1=1234,
-            C14=1.0
-        )
+        transaction = TransactionFeatures(TransactionAmt=100.0, card1=1234, C14=1.0)
         assert transaction.TransactionAmt == 100.0
 
         # Transaction with extra fields (should be allowed)
-        transaction = TransactionFeatures(
-            TransactionAmt=100.0,
-            custom_field="value"
-        )
+        transaction = TransactionFeatures(TransactionAmt=100.0, custom_field="value")
         assert hasattr(transaction, "custom_field")
 
     def test_prediction_response_schema(self):
@@ -115,10 +99,7 @@ class TestAPISchemas:
         from deployment.api.schemas import PredictionResponse
 
         response = PredictionResponse(
-            is_fraud=True,
-            fraud_probability=0.85,
-            risk_level="high",
-            threshold_used=0.5
+            is_fraud=True, fraud_probability=0.85, risk_level="high", threshold_used=0.5
         )
 
         assert response.is_fraud is True

@@ -69,8 +69,12 @@ class TestComputeMetrics:
         assert "true_positives" in cm
 
         # Check totals
-        total = (cm["true_negatives"] + cm["false_positives"] +
-                 cm["false_negatives"] + cm["true_positives"])
+        total = (
+            cm["true_negatives"]
+            + cm["false_positives"]
+            + cm["false_negatives"]
+            + cm["true_positives"]
+        )
         assert total == len(y_true)
 
     def test_no_proba(self):
@@ -94,7 +98,7 @@ class TestCompareWithPaper:
             "precision": 0.95,
             "recall": 0.90,
             "f1_score": 0.92,
-            "auc_roc": 0.97
+            "auc_roc": 0.97,
         }
 
         comparison = compare_with_paper(metrics)
@@ -108,10 +112,7 @@ class TestCompareWithPaper:
     def test_within_tolerance(self):
         """Test tolerance checking."""
         # Close to paper results
-        metrics = {
-            "accuracy": 0.98,
-            "auc_roc": 0.98
-        }
+        metrics = {"accuracy": 0.98, "auc_roc": 0.98}
 
         comparison = compare_with_paper(metrics)
 
