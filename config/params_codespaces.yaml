@@ -1,0 +1,77 @@
+# Configuration for GitHub Codespaces (Low-Memory Mode)
+# Uses sampling to reduce memory from ~16GB to ~3GB
+
+# Data Configuration
+data:
+  train_transaction: "data/train_transaction.csv"
+  train_identity: "data/train_identity.csv"
+  test_size: 0.20
+  random_state: 42
+  sample_size: 100000  # Reduced for Codespaces (8GB RAM limit)
+
+# Preprocessing
+preprocessing:
+  numerical_imputation: "median"
+  categorical_imputation: "most_frequent"
+
+# SMOTE Configuration
+smote:
+  sampling_strategy: "auto"
+  random_state: 42
+  k_neighbors: 5
+
+# Feature Selection
+feature_selection:
+  method: "shap"
+  n_top_features: 30
+
+# Base Models Configuration (reduced for faster training)
+base_models:
+  xgboost:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.1
+    random_state: 42
+
+  lightgbm:
+    n_estimators: 200
+    max_depth: 6
+    learning_rate: 0.1
+    random_state: 42
+    verbose: -1
+
+  catboost:
+    iterations: 200
+    depth: 6
+    learning_rate: 0.1
+    random_seed: 42
+    verbose: 0
+
+# Meta-Learner Configuration
+meta_learner:
+  model: "xgboost"
+  n_estimators: 100
+  max_depth: 4
+  learning_rate: 0.1
+  random_state: 42
+
+# Threshold Optimization
+threshold:
+  search_range:
+    start: 0.30
+    end: 0.60
+    step: 0.01
+  default: 0.44
+
+# Cross-Validation
+cross_validation:
+  n_splits: 5
+  shuffle: true
+  random_state: 42
+
+# Output Configuration
+output:
+  results_dir: "results"
+  models_dir: "models"
+  save_models: true
+  save_shap_values: true

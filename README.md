@@ -38,12 +38,22 @@ cd fraud-detection
 # Install dependencies
 pip install -r requirements.txt
 
-# Download dataset from Kaggle
-kaggle competitions download -c ieee-fraud-detection
-unzip ieee-fraud-detection.zip -d data/
+# Run the pipeline
+python src/main.py
+```
+
+### GitHub Codespaces
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/thanhtrung102/fraud-detection)
+
+For Codespaces (limited to 8GB RAM), use the low-memory config:
+
+```bash
+# Copy Codespaces config (enables sampling)
+cp config/params_codespaces.yaml config/params.yaml
 
 # Run the pipeline
-python -m src.main
+python src/main.py
 ```
 
 ---
