@@ -10,7 +10,7 @@ import numpy as np
 import optuna
 from xgboost import XGBClassifier
 from lightgbm import LGBMClassifier
-from catboost import CatBoostClassifier
+from catboost import Pool, cv as catboost_cv
 from sklearn.model_selection import cross_val_score, StratifiedKFold
 
 # Suppress Optuna logging
@@ -112,7 +112,11 @@ def tune_catboost(X: np.ndarray, y: np.ndarray, n_trials: int = 20,
                   cv_folds: int = 5, random_state: int = 42, n_jobs: int = 1) -> dict:
     """
     Tune CatBoost hyperparameters using Optuna.
+    Uses CatBoost's native CV to avoid sklearn compatibility issues.
     """
+    # Create CatBoost Pool
+    pool = Pool(X, y)
+
     def objective(trial):
         params = {
             'iterations': trial.suggest_int('iterations', 100, 500),
@@ -122,14 +126,23 @@ def tune_catboost(X: np.ndarray, y: np.ndarray, n_trials: int = 20,
             'random_seed': random_state,
             'verbose': 0,
             'thread_count': n_jobs,
-            'allow_writing_files': False  # Avoid file I/O issues
+            'allow_writing_files': False,
+            'loss_function': 'Logloss',
+            'eval_metric': 'AUC'
         }
 
-        model = CatBoostClassifier(**params)
-        cv = StratifiedKFold(n_splits=cv_folds, shuffle=True, random_state=random_state)
-        # Use n_jobs=1 for CV to avoid nested parallelism deadlocks
-        scores = cross_val_score(model, X, y, cv=cv, scoring='roc_auc', n_jobs=1)
-        return scores.mean()
+        # Use CatBoost's native cross-validation
+        cv_results = catboost_cv(
+            pool=pool,
+            params=params,
+            fold_count=cv_folds,
+            shuffle=True,
+            partition_random_seed=random_state,
+            verbose=False
+        )
+
+        # Return the best AUC from CV
+        return cv_results['test-AUC-mean'].max()
 
     study = optuna.create_study(direction='maximize',
                                 sampler=optuna.samplers.TPESampler(seed=random_state))
