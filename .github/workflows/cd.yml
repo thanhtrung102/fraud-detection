@@ -1,0 +1,149 @@
+# Continuous Deployment Pipeline
+name: CD
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  PYTHON_VERSION: "3.11"
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCP_REGION: us-central1
+  ARTIFACT_REGISTRY: us-central1-docker.pkg.dev
+
+jobs:
+  # ==========================================================================
+  # Build and Push Docker Images
+  # ==========================================================================
+  build:
+    name: Build & Push
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tags }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/fraud-detection/api
+          tags: |
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push API image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================================
+  # Deploy to Cloud Run
+  # ==========================================================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.event.inputs.environment == 'staging'
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: fraud-detection-api-staging
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/fraud-detection/api:latest
+          flags: |
+            --allow-unauthenticated
+            --memory=2Gi
+            --cpu=1
+            --min-instances=0
+            --max-instances=5
+
+      - name: Test deployment
+        run: |
+          echo "Testing deployment at ${{ steps.deploy.outputs.url }}"
+          curl -f "${{ steps.deploy.outputs.url }}/health" || exit 1
+
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [build, deploy-staging]
+    if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.environment == 'production'
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.url }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: fraud-detection-api
+          region: ${{ env.GCP_REGION }}
+          image: ${{ env.ARTIFACT_REGISTRY }}/${{ env.GCP_PROJECT_ID }}/fraud-detection/api:${{ github.ref_name }}
+          flags: |
+            --memory=4Gi
+            --cpu=2
+            --min-instances=1
+            --max-instances=20
+
+      - name: Notify deployment
+        run: |
+          echo "Production deployment complete!"
+          echo "URL: ${{ steps.deploy.outputs.url }}"

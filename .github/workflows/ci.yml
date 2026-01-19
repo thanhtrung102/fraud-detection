@@ -1,0 +1,163 @@
+# Continuous Integration Pipeline
+name: CI
+
+on:
+  push:
+    branches: [main, mlops]
+  pull_request:
+    branches: [main, mlops]
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ==========================================================================
+  # Code Quality Checks
+  # ==========================================================================
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black mypy
+
+      - name: Run Ruff (linting)
+        run: ruff check src/ mlops/ pipelines/ tests/ --output-format=github
+
+      - name: Run Black (formatting check)
+        run: black --check src/ mlops/ pipelines/ tests/ deployment/
+
+      - name: Run MyPy (type checking)
+        run: mypy src/ mlops/ pipelines/ --ignore-missing-imports
+        continue-on-error: true  # Don't fail on type errors for now
+
+  # ==========================================================================
+  # Unit Tests
+  # ==========================================================================
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov httpx
+
+      - name: Run unit tests
+        run: pytest tests/unit/ -v --cov=src --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage.xml
+          fail_ci_if_error: false
+
+  # ==========================================================================
+  # Integration Tests
+  # ==========================================================================
+  integration:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest httpx
+
+      - name: Run integration tests
+        run: pytest tests/integration/ -v
+        continue-on-error: true  # May fail without model
+
+  # ==========================================================================
+  # Docker Build Test
+  # ==========================================================================
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    needs: quality
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build API Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/Dockerfile
+          push: false
+          tags: fraud-detection-api:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build Training Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: deployment/Dockerfile.training
+          push: false
+          tags: fraud-detection-training:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================================================
+  # Security Scan
+  # ==========================================================================
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install Bandit
+        run: pip install bandit
+
+      - name: Run Bandit security scan
+        run: bandit -r src/ mlops/ pipelines/ -ll
+        continue-on-error: true
