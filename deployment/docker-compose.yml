@@ -1,0 +1,152 @@
+version: '3.8'
+
+services:
+  # MLflow Tracking Server
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    container_name: fraud-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
+      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow-artifacts:/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - fraud-network
+
+  # PostgreSQL for MLflow
+  postgres:
+    image: postgres:15-alpine
+    container_name: fraud-postgres
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow
+      POSTGRES_DB: mlflow
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mlflow"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fraud-network
+
+  # Prefect Server
+  prefect:
+    image: prefecthq/prefect:2-python3.11
+    container_name: fraud-prefect
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://prefect:prefect@postgres-prefect:5432/prefect
+    command: prefect server start
+    depends_on:
+      postgres-prefect:
+        condition: service_healthy
+    networks:
+      - fraud-network
+
+  # PostgreSQL for Prefect
+  postgres-prefect:
+    image: postgres:15-alpine
+    container_name: fraud-postgres-prefect
+    environment:
+      POSTGRES_USER: prefect
+      POSTGRES_PASSWORD: prefect
+      POSTGRES_DB: prefect
+    volumes:
+      - postgres-prefect-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U prefect"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - fraud-network
+
+  # Fraud Detection API
+  api:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: fraud-api
+    ports:
+      - "8000:8000"
+    environment:
+      - MODEL_DIR=/app/models
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ../models:/app/models:ro
+      - ../config:/app/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - mlflow
+    networks:
+      - fraud-network
+
+  # Training Worker
+  training:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.training
+    container_name: fraud-training
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - PREFECT_API_URL=http://prefect:4200/api
+    volumes:
+      - ../data:/app/data
+      - ../models:/app/models
+      - ../results:/app/results
+      - ../config:/app/config
+    depends_on:
+      - mlflow
+      - prefect
+    networks:
+      - fraud-network
+    profiles:
+      - training  # Only start with --profile training
+
+  # Monitoring Dashboard (Evidently)
+  monitoring:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.training
+    container_name: fraud-monitoring
+    command: >
+      python -m pipelines.monitoring_pipeline
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ../data:/app/data
+      - ../monitoring:/app/monitoring
+    depends_on:
+      - mlflow
+    networks:
+      - fraud-network
+    profiles:
+      - monitoring  # Only start with --profile monitoring
+
+volumes:
+  mlflow-artifacts:
+  postgres-data:
+  postgres-prefect-data:
+
+networks:
+  fraud-network:
+    driver: bridge

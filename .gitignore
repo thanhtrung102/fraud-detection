@@ -66,3 +66,31 @@ optuna_study.db
 
 # CatBoost
 catboost_info/
+
+# MLflow
+mlruns/
+mlflow.db
+
+# Terraform
+infrastructure/.terraform/
+infrastructure/*.tfstate
+infrastructure/*.tfstate.*
+infrastructure/.terraform.lock.hcl
+infrastructure/terraform.tfvars
+
+# Monitoring reports
+monitoring/evidently_reports/*.html
+monitoring/evidently_reports/*.json
+
+# Docker
+.docker/
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# Secrets
+*.pem
+*.key
+secrets/
