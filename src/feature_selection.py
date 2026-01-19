@@ -8,8 +8,8 @@ Selects top N features based on SHAP importance values.
 
 import numpy as np
 import pandas as pd
-from xgboost import XGBClassifier
 import shap
+from xgboost import XGBClassifier
 
 
 def shap_feature_selection(X_train: np.ndarray, y_train: np.ndarray,

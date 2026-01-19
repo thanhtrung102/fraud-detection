@@ -5,11 +5,12 @@ Explainability Module
 SHAP, LIME, and Partial Dependence Plot analysis for model interpretability.
 """
 
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import shap
-from pathlib import Path
 
 
 def compute_shap_values(model, X: np.ndarray, feature_names: list = None):
@@ -181,7 +182,7 @@ def plot_partial_dependence(model, X: np.ndarray, feature_names: list,
 
     X_df = pd.DataFrame(X, columns=feature_names)
 
-    display = PartialDependenceDisplay.from_estimator(
+    PartialDependenceDisplay.from_estimator(
         model, X_df, features=feature_indices,
         ax=axes, grid_resolution=50
     )

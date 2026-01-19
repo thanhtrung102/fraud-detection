@@ -56,7 +56,6 @@ def preprocess_inference_data(
     logger = get_run_logger()
 
     # Select only required features
-    available_features = [f for f in feature_names if f in df.columns]
     missing_features = [f for f in feature_names if f not in df.columns]
 
     if missing_features:
@@ -224,7 +223,7 @@ if __name__ == "__main__":
         threshold=0.44
     )
 
-    print(f"\nInference Results:")
+    print("\nInference Results:")
     print(f"  Output: {result['output_path']}")
     print(f"  Total processed: {result['total_processed']}")
     print(f"  Fraud rate: {result['report']['fraud_rate']:.2%}")

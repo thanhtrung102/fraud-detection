@@ -6,19 +6,18 @@ Handles data loading, missing value imputation, encoding,
 train-test split, and SMOTE balancing.
 """
 
-import pandas as pd
 import numpy as np
-from sklearn.impute import SimpleImputer
-from sklearn.preprocessing import LabelEncoder
-from sklearn.model_selection import train_test_split
-from imblearn.over_sampling import SMOTE
+import pandas as pd
 import yaml
-from pathlib import Path
+from imblearn.over_sampling import SMOTE
+from sklearn.impute import SimpleImputer
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
 
 def load_config(config_path: str = "config/params.yaml") -> dict:
     """Load configuration from YAML file."""
-    with open(config_path, 'r') as f:
+    with open(config_path) as f:
         return yaml.safe_load(f)
 
 
@@ -26,7 +25,7 @@ def reduce_memory(df: pd.DataFrame) -> pd.DataFrame:
     """Reduce DataFrame memory by downcasting numeric types."""
     for col in df.columns:
         col_type = df[col].dtype
-        if col_type != object:
+        if col_type is not object:
             c_min, c_max = df[col].min(), df[col].max()
             if str(col_type)[:3] == 'int':
                 if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
@@ -235,5 +234,5 @@ if __name__ == "__main__":
     # Test preprocessing
     config = load_config()
     X_train, X_test, y_train, y_test, features = preprocess_pipeline(config)
-    print(f"\nPreprocessing complete!")
+    print("\nPreprocessing complete!")
     print(f"Features: {len(features)}")

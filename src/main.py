@@ -11,28 +11,33 @@ Target Metrics: 99% Accuracy, 0.99 AUC-ROC, 0.99 Precision, 0.99 Recall, 0.99 F1
 
 import sys
 import time
-import numpy as np
 from pathlib import Path
 
 # Support both: python src/main.py AND python -m src.main
 try:
-    from .data_preprocessing import preprocess_pipeline, load_config
-    from .feature_selection import shap_feature_selection, apply_feature_selection
-    from .optuna_tuning import tune_all_models
-    from .stacking_model import StackingFraudDetector, find_optimal_threshold
+    from .data_preprocessing import load_config, preprocess_pipeline
     from .evaluation import (
-        compute_metrics, print_results, generate_all_plots, save_results
+        compute_metrics,
+        generate_all_plots,
+        print_results,
+        save_results,
     )
     from .explainability import generate_all_explanations
+    from .feature_selection import apply_feature_selection, shap_feature_selection
+    from .optuna_tuning import tune_all_models
+    from .stacking_model import StackingFraudDetector, find_optimal_threshold
 except ImportError:
-    from data_preprocessing import preprocess_pipeline, load_config
-    from feature_selection import shap_feature_selection, apply_feature_selection
-    from optuna_tuning import tune_all_models
-    from stacking_model import StackingFraudDetector, find_optimal_threshold
+    from data_preprocessing import load_config, preprocess_pipeline
     from evaluation import (
-        compute_metrics, print_results, generate_all_plots, save_results
+        compute_metrics,
+        generate_all_plots,
+        print_results,
+        save_results,
     )
     from explainability import generate_all_explanations
+    from feature_selection import apply_feature_selection, shap_feature_selection
+    from optuna_tuning import tune_all_models
+    from stacking_model import StackingFraudDetector, find_optimal_threshold
 
 
 # Paper target metrics
@@ -213,7 +218,7 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
 
     # Generate explainability reports
     print("\n[BONUS] Generating explainability reports...")
-    top_features = generate_all_explanations(
+    generate_all_explanations(
         model.xgb_model,
         X_train_selected,
         X_test_selected,

@@ -3,15 +3,16 @@ Unit Tests for Evaluation Module
 ================================
 """
 
-import pytest
-import numpy as np
 import sys
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.evaluation import compute_metrics, compare_with_paper
+from src.evaluation import compare_with_paper, compute_metrics
 
 
 class TestComputeMetrics:
@@ -115,8 +116,8 @@ class TestCompareWithPaper:
         comparison = compare_with_paper(metrics)
 
         # 2% tolerance
-        assert comparison["accuracy"]["within_tolerance"] == True
-        assert comparison["auc_roc"]["within_tolerance"] == True
+        assert comparison["accuracy"]["within_tolerance"] is True
+        assert comparison["auc_roc"]["within_tolerance"] is True
 
 
 if __name__ == "__main__":

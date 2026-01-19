@@ -6,14 +6,14 @@ Implements the stacking ensemble with XGBoost, LightGBM, and CatBoost
 base learners and XGBoost meta-learner.
 """
 
-import numpy as np
-import pandas as pd
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-from catboost import CatBoostClassifier
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
-import joblib
 from pathlib import Path
+
+import joblib
+import numpy as np
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from xgboost import XGBClassifier
 
 
 class StackingFraudDetector:

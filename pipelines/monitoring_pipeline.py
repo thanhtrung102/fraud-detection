@@ -284,7 +284,7 @@ if __name__ == "__main__":
         drift_threshold=0.3
     )
 
-    print(f"\nMonitoring Results:")
+    print("\nMonitoring Results:")
     print(f"  Drift detected: {result['drift_detected']}")
     print(f"  Drift share: {result['drift_share']:.2%}")
     print(f"  Report: {result['drift_report']}")

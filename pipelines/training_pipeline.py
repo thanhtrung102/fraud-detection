@@ -283,7 +283,7 @@ if __name__ == "__main__":
         register_model=False
     )
 
-    print(f"\nTraining Results:")
+    print("\nTraining Results:")
     print(f"  Run ID: {result['run_id']}")
     print(f"  AUC-ROC: {result['metrics']['auc_roc']:.4f}")
     print(f"  Accuracy: {result['metrics']['accuracy']:.4f}")

@@ -6,12 +6,14 @@ Hyperparameter optimization using Optuna for XGBoost, LightGBM, and CatBoost.
 """
 
 import os
+
 import numpy as np
 import optuna
-from xgboost import XGBClassifier
+from catboost import Pool
+from catboost import cv as catboost_cv
 from lightgbm import LGBMClassifier
-from catboost import Pool, cv as catboost_cv
-from sklearn.model_selection import cross_val_score, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, cross_val_score
+from xgboost import XGBClassifier
 
 # Suppress Optuna logging
 optuna.logging.set_verbosity(optuna.logging.WARNING)
