@@ -4,14 +4,16 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Dataset](https://img.shields.io/badge/Kaggle-IEEE--CIS%20Fraud-20BEFF.svg)](https://www.kaggle.com/c/ieee-fraud-detection)
 
-A high-performance fraud detection system using stacking ensemble methods combined with explainable AI techniques. This project achieves **99% accuracy** and **0.99 AUC-ROC** while maintaining full model interpretability for regulatory compliance.
+A fraud detection system using stacking ensemble methods combined with explainable AI techniques. Based on the paper ["Financial Fraud Detection Using Explainable AI and Stacking Ensemble Methods"](https://arxiv.org/html/2505.10050v1) (arXiv:2505.10050).
 
 ## Highlights
 
-- **Stacking Ensemble**: Combines XGBoost, LightGBM, and CatBoost for robust predictions
+- **Stacking Ensemble**: Combines XGBoost, LightGBM, and CatBoost with XGBoost meta-learner
 - **Explainable AI**: Full transparency with SHAP, LIME, and Partial Dependence Plots
-- **Production-Ready**: Modular codebase with configuration management
-- **High Performance**: 99% accuracy on 590K+ transaction dataset
+- **Optuna Tuning**: Automated hyperparameter optimization (20 trials per model)
+- **SHAP Feature Selection**: Top 30 features selected based on SHAP importance
+- **Achieved**: ~98% accuracy, ~92% AUC-ROC on 100K sample (Codespaces)
+- **Paper Target**: 99% accuracy, 0.99 AUC-ROC on full 590K dataset
 
 ---
 
@@ -267,33 +269,52 @@ print(importance_df.head(10))
 
 ## Results
 
-### Performance Metrics
+### Achieved Performance (100K Sample - Codespaces)
 
-| Metric | Score |
-|--------|-------|
-| **Accuracy** | 0.99 |
-| **Precision** | 0.99 |
-| **Recall** | 0.99 |
-| **F1-Score** | 0.99 |
-| **AUC-ROC** | 0.99 |
+| Metric | Achieved | Paper Target | Status |
+|--------|----------|--------------|--------|
+| **Accuracy** | 0.9789 | 0.99 | 98.9% of target |
+| **Precision** | 0.7888 | 0.99 | Below target |
+| **Recall** | 0.5426 | 0.99 | Below target |
+| **F1-Score** | 0.6430 | 0.99 | Below target |
+| **AUC-ROC** | 0.9195 | 0.99 | 92.9% of target |
 
-### Cross-Validation
+### Optuna Cross-Validation Scores
 
+During hyperparameter tuning (on SMOTE-balanced training data):
 ```
-5-Fold Stratified CV AUC Scores:
-[0.9979, 0.9979, 0.9979, 0.9981, 0.9980]
-Mean: 0.9980 (+/- 0.0002)
+XGBoost CV AUC:  0.9969
+LightGBM CV AUC: 0.9973
+CatBoost CV AUC: 0.9970
 ```
 
 ### Confusion Matrix
 
 |  | Predicted Legitimate | Predicted Fraud |
 |---|:-------------------:|:---------------:|
-| **Actual Legitimate** | 113,453 | 481 |
-| **Actual Fraud** | 1,825 | 112,192 |
+| **Actual Legitimate** | 57,596 | 305 |
+| **Actual Fraud** | 960 | 1,139 |
 
-- **False Positive Rate**: 0.42% (minimal false alarms)
-- **Fraud Detection Rate**: 98.4%
+- **True Negative Rate**: 99.5% (legitimate correctly classified)
+- **Fraud Detection Rate**: 54.3% (recall)
+- **Threshold Used**: 0.67 (F1-optimized)
+
+### Top Features by SHAP Importance
+
+1. C14 (transaction category): 0.4719
+2. C12: 0.4405
+3. card6: 0.4312
+4. C1: 0.4239
+5. V308: 0.4019
+
+### Notes on Results Gap
+
+The gap between CV scores (~0.997) and test results (~0.92 AUC) is due to:
+- **Distribution mismatch**: Training on SMOTE-balanced data (50/50), testing on imbalanced data (3.5% fraud)
+- **Sample size**: Using 100K samples vs paper's 590K full dataset
+- **Threshold selection**: F1-optimized threshold (0.67) prioritizes precision over recall
+
+For better recall, consider using the paper's threshold of 0.44 instead of F1-optimization.
 
 ---
 
