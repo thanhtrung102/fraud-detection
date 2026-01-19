@@ -6,12 +6,11 @@ Experiment tracking and logging utilities using MLflow.
 """
 
 import os
-import json
+from typing import Any, Optional
+
 import mlflow
-from mlflow.tracking import MlflowClient
-from pathlib import Path
-from typing import Dict, Any, Optional, List
 import numpy as np
+from mlflow.tracking import MlflowClient
 
 
 def setup_mlflow(
@@ -47,7 +46,7 @@ def setup_mlflow(
     return experiment_id
 
 
-def log_params(params: Dict[str, Any], prefix: str = "") -> None:
+def log_params(params: dict[str, Any], prefix: str = "") -> None:
     """
     Log parameters to MLflow.
 
@@ -63,7 +62,7 @@ def log_params(params: Dict[str, Any], prefix: str = "") -> None:
             mlflow.log_param(param_name, value)
 
 
-def log_metrics(metrics: Dict[str, float], step: Optional[int] = None) -> None:
+def log_metrics(metrics: dict[str, float], step: Optional[int] = None) -> None:
     """
     Log metrics to MLflow.
 
@@ -114,7 +113,7 @@ def log_figure(fig, filename: str) -> None:
 
 def start_run(
     run_name: Optional[str] = None,
-    tags: Optional[Dict[str, str]] = None,
+    tags: Optional[dict[str, str]] = None,
     nested: bool = False
 ) -> mlflow.ActiveRun:
     """
@@ -142,12 +141,12 @@ def end_run(status: str = "FINISHED") -> None:
 
 
 def log_training_run(
-    params: Dict[str, Any],
-    metrics: Dict[str, float],
+    params: dict[str, Any],
+    metrics: dict[str, float],
     model_path: str,
     artifacts_dir: Optional[str] = None,
     run_name: Optional[str] = None,
-    tags: Optional[Dict[str, str]] = None
+    tags: Optional[dict[str, str]] = None
 ) -> str:
     """
     Log a complete training run to MLflow.
@@ -189,7 +188,7 @@ def get_best_run(
     experiment_name: str,
     metric: str = "auc_roc",
     ascending: bool = False
-) -> Optional[Dict[str, Any]]:
+) -> Optional[dict[str, Any]]:
     """
     Get the best run from an experiment.
 
@@ -229,9 +228,9 @@ def get_best_run(
 
 def compare_runs(
     experiment_name: str,
-    metrics: List[str] = ["accuracy", "auc_roc", "f1_score"],
+    metrics: Optional[list[str]] = None,
     max_runs: int = 10
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """
     Compare multiple runs from an experiment.
 
@@ -243,6 +242,9 @@ def compare_runs(
     Returns:
         List of run comparisons
     """
+    if metrics is None:
+        metrics = ["accuracy", "auc_roc", "f1_score"]
+
     client = MlflowClient()
     experiment = client.get_experiment_by_name(experiment_name)
 

@@ -8,10 +8,9 @@ REST API for real-time fraud detection predictions.
 import os
 import sys
 import time
-from pathlib import Path
-from datetime import datetime
-from typing import List, Optional
 from contextlib import asynccontextmanager
+from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, status
@@ -22,14 +21,13 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from deployment.api.schemas import (
-    PredictionRequest,
     BatchPredictionRequest,
-    PredictionResponse,
     BatchPredictionResponse,
     HealthResponse,
     ModelInfoResponse,
-    ErrorResponse,
-    TransactionFeatures
+    PredictionRequest,
+    PredictionResponse,
+    TransactionFeatures,
 )
 
 # Global model instance
@@ -68,7 +66,7 @@ def load_model():
         return False
 
 
-def get_default_features() -> List[str]:
+def get_default_features() -> list[str]:
     """Get default feature names."""
     # Top 30 features from SHAP analysis
     return [

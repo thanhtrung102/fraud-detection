@@ -6,20 +6,20 @@ Prefect flow for batch inference with model monitoring.
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from pathlib import Path
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
-
 from prefect import flow, task
 from prefect.logging import get_run_logger
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.stacking_model import StackingFraudDetector
 from src.data_preprocessing import load_config
+from src.stacking_model import StackingFraudDetector
 
 
 @task(name="load_model", retries=2)
@@ -50,7 +50,7 @@ def load_inference_data(data_path: str) -> pd.DataFrame:
 @task(name="preprocess_inference_data")
 def preprocess_inference_data(
     df: pd.DataFrame,
-    feature_names: List[str]
+    feature_names: list[str]
 ) -> np.ndarray:
     """Preprocess data for inference."""
     logger = get_run_logger()
@@ -76,7 +76,7 @@ def run_inference(
     model: StackingFraudDetector,
     X: np.ndarray,
     threshold: float = 0.44
-) -> Dict[str, np.ndarray]:
+) -> dict[str, np.ndarray]:
     """Run inference on data."""
     logger = get_run_logger()
     logger.info(f"Running inference on {X.shape[0]} samples")
@@ -99,7 +99,7 @@ def run_inference(
 @task(name="save_predictions")
 def save_predictions(
     df: pd.DataFrame,
-    predictions: Dict[str, np.ndarray],
+    predictions: dict[str, np.ndarray],
     output_path: str
 ) -> str:
     """Save predictions to file."""
@@ -120,9 +120,9 @@ def save_predictions(
 
 @task(name="generate_inference_report")
 def generate_inference_report(
-    predictions: Dict[str, np.ndarray],
+    predictions: dict[str, np.ndarray],
     output_dir: str = "results"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Generate inference summary report."""
     logger = get_run_logger()
 
@@ -159,9 +159,9 @@ def inference_flow(
     data_path: str,
     model_dir: str = "models",
     output_path: Optional[str] = None,
-    feature_names: Optional[List[str]] = None,
+    feature_names: Optional[list[str]] = None,
     threshold: float = 0.44
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Batch inference pipeline flow.
 

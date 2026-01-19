@@ -5,11 +5,11 @@ MLflow Model Registry
 Model versioning and staging using MLflow Model Registry.
 """
 
+from typing import Any, Optional
+
 import mlflow
-from mlflow.tracking import MlflowClient
 from mlflow.exceptions import MlflowException
-from typing import Optional, Dict, Any, List
-import os
+from mlflow.tracking import MlflowClient
 
 
 class ModelRegistry:
@@ -31,7 +31,7 @@ class ModelRegistry:
         run_id: str,
         model_path: str = "model",
         model_name: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None,
+        tags: Optional[dict[str, str]] = None,
         description: Optional[str] = None
     ) -> str:
         """
@@ -100,7 +100,7 @@ class ModelRegistry:
         self,
         stage: Optional[str] = None,
         model_name: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+    ) -> Optional[dict[str, Any]]:
         """
         Get the latest model version.
 
@@ -175,7 +175,7 @@ class ModelRegistry:
         self,
         model_name: Optional[str] = None,
         max_results: int = 10
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         List all versions of a model.
 

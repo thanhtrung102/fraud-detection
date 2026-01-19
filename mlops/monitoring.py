@@ -5,27 +5,22 @@ Model Monitoring with Evidently
 Data drift detection and model performance monitoring.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
 import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
 
+import numpy as np
+import pandas as pd
 from evidently import ColumnMapping
-from evidently.report import Report
 from evidently.metric_preset import (
+    ClassificationPreset,
     DataDriftPreset,
     DataQualityPreset,
     TargetDriftPreset,
-    ClassificationPreset
 )
-from evidently.metrics import (
-    DatasetDriftMetric,
-    DataDriftTable,
-    ColumnDriftMetric,
-    DatasetMissingValuesMetric
-)
+from evidently.metrics import DatasetMissingValuesMetric
+from evidently.report import Report
 
 
 class FraudMonitor:
@@ -36,8 +31,8 @@ class FraudMonitor:
         reference_data: pd.DataFrame,
         target_column: str = "isFraud",
         prediction_column: str = "prediction",
-        numerical_features: Optional[List[str]] = None,
-        categorical_features: Optional[List[str]] = None
+        numerical_features: Optional[list[str]] = None,
+        categorical_features: Optional[list[str]] = None
     ):
         """
         Initialize the fraud monitor.
@@ -84,7 +79,7 @@ class FraudMonitor:
         self,
         current_data: pd.DataFrame,
         output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a data drift report.
 
@@ -120,7 +115,7 @@ class FraudMonitor:
         self,
         current_data: pd.DataFrame,
         output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a model performance report.
 
@@ -155,7 +150,7 @@ class FraudMonitor:
         self,
         current_data: pd.DataFrame,
         output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a data quality report.
 
@@ -187,7 +182,7 @@ class FraudMonitor:
         current_data: pd.DataFrame,
         drift_threshold: float = 0.5,
         feature_drift_threshold: float = 0.3
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Check if data drift exceeds thresholds.
 
@@ -225,7 +220,7 @@ class FraudMonitor:
             "timestamp": datetime.now().isoformat()
         }
 
-    def _extract_drift_metrics(self, result: Dict) -> Dict[str, Any]:
+    def _extract_drift_metrics(self, result: dict) -> dict[str, Any]:
         """Extract key drift metrics from report result."""
         metrics = {
             "dataset_drift": False,
@@ -255,7 +250,7 @@ class FraudMonitor:
 
         return metrics
 
-    def _extract_performance_metrics(self, result: Dict) -> Dict[str, Any]:
+    def _extract_performance_metrics(self, result: dict) -> dict[str, Any]:
         """Extract key performance metrics from report result."""
         metrics = {}
 
@@ -284,7 +279,7 @@ def create_monitoring_report(
     output_dir: str = "monitoring/evidently_reports",
     target_column: str = "isFraud",
     prediction_column: str = "prediction"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Create all monitoring reports.
 
@@ -349,8 +344,6 @@ def create_monitoring_report(
 
 if __name__ == "__main__":
     # Example usage
-    import numpy as np
-
     # Create sample data
     np.random.seed(42)
     n_samples = 1000

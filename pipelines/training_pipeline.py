@@ -6,29 +6,28 @@ Prefect flow for model training with MLflow tracking.
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional, Tuple
-import numpy as np
+from pathlib import Path
+from typing import Any, Optional
 
+import numpy as np
 from prefect import flow, task
 from prefect.logging import get_run_logger
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.data_preprocessing import preprocess_pipeline, load_config
-from src.feature_selection import shap_feature_selection, apply_feature_selection
+from mlops.registry import ModelRegistry
+from mlops.tracking import log_artifacts, log_metrics, log_params, setup_mlflow, start_run
+from src.data_preprocessing import load_config, preprocess_pipeline
+from src.evaluation import compute_metrics, generate_all_plots
+from src.feature_selection import apply_feature_selection, shap_feature_selection
 from src.optuna_tuning import tune_all_models
 from src.stacking_model import StackingFraudDetector, find_optimal_threshold
-from src.evaluation import compute_metrics, save_results, generate_all_plots
-
-from mlops.tracking import setup_mlflow, log_params, log_metrics, log_artifacts, start_run, end_run
-from mlops.registry import ModelRegistry
 
 
 @task(name="load_data", retries=2, retry_delay_seconds=30)
-def load_and_preprocess_data(config: Dict[str, Any]) -> Tuple:
+def load_and_preprocess_data(config: dict[str, Any]) -> tuple:
     """Load and preprocess the fraud detection data."""
     logger = get_run_logger()
     logger.info("Loading and preprocessing data...")
@@ -53,7 +52,7 @@ def select_features(
     y_train: np.ndarray,
     feature_names: list,
     n_top_features: int = 30
-) -> Tuple:
+) -> tuple:
     """Perform SHAP-based feature selection."""
     logger = get_run_logger()
     logger.info(f"Selecting top {n_top_features} features using SHAP...")
@@ -78,7 +77,7 @@ def tune_hyperparameters(
     y_train: np.ndarray,
     n_trials: int = 20,
     cv_folds: int = 5
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Tune model hyperparameters using Optuna."""
     logger = get_run_logger()
     logger.info(f"Tuning hyperparameters with {n_trials} trials...")
@@ -98,8 +97,8 @@ def tune_hyperparameters(
 def train_model(
     X_train: np.ndarray,
     y_train: np.ndarray,
-    params: Dict[str, Any],
-    config: Dict[str, Any]
+    params: dict[str, Any],
+    config: dict[str, Any]
 ) -> StackingFraudDetector:
     """Train the stacking ensemble model."""
     logger = get_run_logger()
@@ -123,7 +122,7 @@ def evaluate_model(
     X_test: np.ndarray,
     y_test: np.ndarray,
     output_dir: str = "results"
-) -> Tuple[Dict[str, float], np.ndarray, float]:
+) -> tuple[dict[str, float], np.ndarray, float]:
     """Evaluate the trained model."""
     logger = get_run_logger()
     logger.info("Evaluating model...")
@@ -159,7 +158,7 @@ def save_model(
 @task(name="register_model")
 def register_model_to_mlflow(
     run_id: str,
-    metrics: Dict[str, float],
+    metrics: dict[str, float],
     stage: str = "Staging"
 ) -> Optional[str]:
     """Register the model to MLflow registry."""
@@ -187,7 +186,7 @@ def training_flow(
     n_top_features: int = 30,
     register_model: bool = True,
     mlflow_tracking_uri: str = "sqlite:///mlflow.db"
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Complete training pipeline flow.
 

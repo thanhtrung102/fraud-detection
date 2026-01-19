@@ -3,14 +3,14 @@ Integration Tests for FastAPI
 =============================
 """
 
-import pytest
 import sys
 from pathlib import Path
 
+import pytest
+from fastapi.testclient import TestClient
+
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from fastapi.testclient import TestClient
 
 
 class TestAPIEndpoints:
@@ -121,7 +121,7 @@ class TestAPISchemas:
             threshold_used=0.5
         )
 
-        assert response.is_fraud == True
+        assert response.is_fraud is True
         assert response.fraud_probability == 0.85
         assert response.risk_level == "high"
 

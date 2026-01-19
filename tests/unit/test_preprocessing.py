@@ -3,16 +3,17 @@ Unit Tests for Data Preprocessing
 =================================
 """
 
-import pytest
-import numpy as np
-import pandas as pd
 import sys
 from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.data_preprocessing import reduce_memory, load_config
+from src.data_preprocessing import load_config, reduce_memory
 
 
 class TestReduceMemory:

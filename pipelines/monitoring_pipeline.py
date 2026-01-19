@@ -5,20 +5,20 @@ Monitoring Pipeline
 Prefect flow for model monitoring and drift detection.
 """
 
-import sys
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, Any, Optional
-import pandas as pd
 import json
+import sys
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
 
+import pandas as pd
 from prefect import flow, task
 from prefect.logging import get_run_logger
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from mlops.monitoring import FraudMonitor, create_monitoring_report
+from mlops.monitoring import FraudMonitor
 
 
 @task(name="load_reference_data")
@@ -50,7 +50,7 @@ def check_data_drift(
     reference_data: pd.DataFrame,
     production_data: pd.DataFrame,
     drift_threshold: float = 0.5
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Check for data drift between reference and production data."""
     logger = get_run_logger()
     logger.info("Checking for data drift...")
@@ -118,7 +118,7 @@ def generate_performance_report(
 
 
 @task(name="send_alert")
-def send_alert(drift_result: Dict[str, Any], alert_config: Dict[str, Any]) -> None:
+def send_alert(drift_result: dict[str, Any], alert_config: dict[str, Any]) -> None:
     """Send alert if drift is detected."""
     logger = get_run_logger()
 
@@ -151,7 +151,7 @@ def send_alert(drift_result: Dict[str, Any], alert_config: Dict[str, Any]) -> No
 
 @task(name="save_monitoring_metrics")
 def save_monitoring_metrics(
-    drift_result: Dict[str, Any],
+    drift_result: dict[str, Any],
     output_dir: str
 ) -> str:
     """Save monitoring metrics to JSON."""
@@ -174,8 +174,8 @@ def monitoring_flow(
     production_path: str,
     output_dir: str = "monitoring/evidently_reports",
     drift_threshold: float = 0.5,
-    alert_config: Optional[Dict[str, Any]] = None
-) -> Dict[str, Any]:
+    alert_config: Optional[dict[str, Any]] = None
+) -> dict[str, Any]:
     """
     Model monitoring pipeline flow.
 
