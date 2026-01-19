@@ -1,0 +1,134 @@
+# Production Configuration - Replicating Paper Results
+# Target: 99% Accuracy, 0.99 AUC-ROC
+# Hardware: 4 cores, 16GB RAM, 32GB storage
+#
+# Paper: "Financial Fraud Detection Using Explainable AI and Stacking Ensemble Methods"
+# https://arxiv.org/html/2505.10050v1
+
+# Data Configuration
+data:
+  train_transaction: "data/train_transaction.csv"
+  train_identity: "data/train_identity.csv"
+  test_size: 0.20
+  random_state: 42
+  sample_size: 300000  # 300K samples - optimal for 16GB RAM with SMOTE
+
+# Preprocessing
+preprocessing:
+  numerical_imputation: "median"
+  categorical_imputation: "most_frequent"
+
+# SMOTE Configuration (as per paper)
+smote:
+  sampling_strategy: "auto"  # Balance to 1:1 ratio
+  random_state: 42
+  k_neighbors: 5
+
+# Feature Selection (as per paper - top 30 via SHAP)
+feature_selection:
+  method: "shap"
+  n_top_features: 30
+  shap_sample_size: 50000  # Sample for SHAP calculation
+
+# Optuna Hyperparameter Tuning (as per paper - 20 trials)
+optuna:
+  n_trials: 20
+  direction: "maximize"
+  metric: "roc_auc"
+  cv_folds: 5
+
+# XGBoost Search Space (for Optuna)
+xgboost_search_space:
+  n_estimators:
+    low: 100
+    high: 500
+  max_depth:
+    low: 3
+    high: 10
+  learning_rate:
+    low: 0.01
+    high: 0.3
+  subsample:
+    low: 0.6
+    high: 1.0
+  colsample_bytree:
+    low: 0.6
+    high: 1.0
+  min_child_weight:
+    low: 1
+    high: 10
+  gamma:
+    low: 0
+    high: 0.5
+  reg_alpha:
+    low: 0
+    high: 1
+  reg_lambda:
+    low: 0
+    high: 1
+
+# Base Models Configuration (optimized for paper results)
+base_models:
+  xgboost:
+    n_estimators: 400
+    max_depth: 8
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 3
+    gamma: 0.1
+    reg_alpha: 0.1
+    reg_lambda: 1.0
+    random_state: 42
+    n_jobs: 4  # Use all 4 cores
+
+  lightgbm:
+    n_estimators: 400
+    max_depth: 8
+    learning_rate: 0.1
+    num_leaves: 64
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_samples: 20
+    random_state: 42
+    verbose: -1
+    n_jobs: 4  # Use all 4 cores
+
+  catboost:
+    iterations: 400
+    depth: 8
+    learning_rate: 0.1
+    l2_leaf_reg: 3.0
+    random_seed: 42
+    verbose: 0
+    thread_count: 4  # Use all 4 cores
+
+# Meta-Learner Configuration (XGBoost as per paper)
+meta_learner:
+  model: "xgboost"
+  n_estimators: 200
+  max_depth: 5
+  learning_rate: 0.1
+  random_state: 42
+  n_jobs: 4
+
+# Threshold Optimization (paper found 0.44 optimal)
+threshold:
+  search_range:
+    start: 0.30
+    end: 0.60
+    step: 0.01
+  default: 0.44
+
+# Cross-Validation (5-fold stratified as per paper)
+cross_validation:
+  n_splits: 5
+  shuffle: true
+  random_state: 42
+
+# Output Configuration
+output:
+  results_dir: "results"
+  models_dir: "models"
+  save_models: true
+  save_shap_values: true

@@ -42,14 +42,28 @@ pip install -r requirements.txt
 python src/main.py
 ```
 
-### GitHub Codespaces
+### Production Mode (Replicate Paper Results)
+
+For machines with **4 cores, 16GB RAM, 32GB storage**:
+
+```bash
+# Copy production config (300K samples, optimized for paper results)
+cp config/params_production.yaml config/params.yaml
+
+# Run the pipeline
+python src/main.py
+```
+
+**Target Metrics:** 99% Accuracy, 0.99 AUC-ROC (as per [arXiv:2505.10050](https://arxiv.org/html/2505.10050v1))
+
+### GitHub Codespaces (8GB RAM)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/thanhtrung102/fraud-detection)
 
-For Codespaces (limited to 8GB RAM), use the low-memory config:
+For Codespaces (limited to 8GB RAM):
 
 ```bash
-# Copy Codespaces config (enables sampling)
+# Copy Codespaces config (100K samples)
 cp config/params_codespaces.yaml config/params.yaml
 
 # Run the pipeline
