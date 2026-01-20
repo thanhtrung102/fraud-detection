@@ -27,7 +27,6 @@ try:
     from evidently.report import Report
 except ImportError:
     # Evidently >= 0.5.0 (moved to legacy module)
-    from evidently.legacy.pipeline.column_mapping import ColumnMapping
     from evidently.legacy.metric_preset import (
         ClassificationPreset,
         DataDriftPreset,
@@ -35,6 +34,7 @@ except ImportError:
         TargetDriftPreset,
     )
     from evidently.legacy.metrics import DatasetMissingValuesMetric
+    from evidently.legacy.pipeline.column_mapping import ColumnMapping
     from evidently.legacy.report import Report
 
 

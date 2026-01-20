@@ -18,7 +18,6 @@ from prefect.logging import get_run_logger
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.data_preprocessing import load_config
 from src.stacking_model import StackingFraudDetector
 
 
