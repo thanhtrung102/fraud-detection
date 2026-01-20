@@ -200,7 +200,9 @@ def training_flow(
     # Setup MLflow
     setup_mlflow(tracking_uri=mlflow_tracking_uri, experiment_name="fraud-detection")
 
-    # Load config
+    # Load config (use default path if not specified)
+    if config_path is None:
+        config_path = "config/params.yaml"
     config = load_config(config_path)
 
     run_name = f"training_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
