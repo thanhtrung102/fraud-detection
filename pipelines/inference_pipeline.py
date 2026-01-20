@@ -49,8 +49,11 @@ def load_inference_data(data_path: str) -> pd.DataFrame:
 
 @task(name="preprocess_inference_data")
 def preprocess_inference_data(df: pd.DataFrame, feature_names: list[str]) -> np.ndarray:
-    """Preprocess data for inference."""
+    """Preprocess data for inference with encoding for categorical features."""
     logger = get_run_logger()
+    from sklearn.preprocessing import LabelEncoder
+
+    df = df.copy()
 
     # Select only required features
     missing_features = [f for f in feature_names if f not in df.columns]
@@ -61,7 +64,22 @@ def preprocess_inference_data(df: pd.DataFrame, feature_names: list[str]) -> np.
         for f in missing_features:
             df[f] = 0
 
-    X = df[feature_names].values
+    # Select the features we need
+    df_features = df[feature_names].copy()
+
+    # Encode categorical columns (same as training preprocessing)
+    categorical_cols = df_features.select_dtypes(include=["object"]).columns.tolist()
+    if categorical_cols:
+        logger.info(f"Encoding {len(categorical_cols)} categorical columns: {categorical_cols}")
+        le = LabelEncoder()
+        for col in categorical_cols:
+            # Handle NaN values by converting to string first
+            df_features[col] = le.fit_transform(df_features[col].astype(str))
+
+    # Fill any remaining NaN values with 0
+    df_features = df_features.fillna(0)
+
+    X = df_features.values
     logger.info(f"Preprocessed data shape: {X.shape}")
 
     return X
