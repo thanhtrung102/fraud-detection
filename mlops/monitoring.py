@@ -12,15 +12,30 @@ from typing import Any, Optional
 
 import numpy as np
 import pandas as pd
-from evidently import ColumnMapping
-from evidently.metric_preset import (
-    ClassificationPreset,
-    DataDriftPreset,
-    DataQualityPreset,
-    TargetDriftPreset,
-)
-from evidently.metrics import DatasetMissingValuesMetric
-from evidently.report import Report
+
+# Handle different Evidently versions (0.7.x has new API structure)
+try:
+    # Evidently < 0.4.0
+    from evidently import ColumnMapping
+    from evidently.metric_preset import (
+        ClassificationPreset,
+        DataDriftPreset,
+        DataQualityPreset,
+        TargetDriftPreset,
+    )
+    from evidently.metrics import DatasetMissingValuesMetric
+    from evidently.report import Report
+except ImportError:
+    # Evidently >= 0.5.0 (moved to legacy module)
+    from evidently.legacy.pipeline.column_mapping import ColumnMapping
+    from evidently.legacy.metric_preset import (
+        ClassificationPreset,
+        DataDriftPreset,
+        DataQualityPreset,
+        TargetDriftPreset,
+    )
+    from evidently.legacy.metrics import DatasetMissingValuesMetric
+    from evidently.legacy.report import Report
 
 
 class FraudMonitor:
