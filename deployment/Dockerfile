@@ -26,7 +26,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY src/ ./src/
 COPY deployment/ ./deployment/
 COPY config/ ./config/
-COPY models/ ./models/
+
+# Create models directory (models are loaded at runtime, not baked into image)
+RUN mkdir -p ./models
 
 # Create non-root user
 RUN useradd --create-home appuser && chown -R appuser:appuser /app
