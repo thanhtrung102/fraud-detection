@@ -69,7 +69,9 @@ def preprocess_inference_data(df: pd.DataFrame, feature_names: list[str]) -> np.
     # Encode categorical columns (same as training preprocessing)
     categorical_cols = df_features.select_dtypes(include=["object"]).columns.tolist()
     if categorical_cols:
-        logger.info(f"Encoding {len(categorical_cols)} categorical columns: {categorical_cols}")
+        logger.info(
+            f"Encoding {len(categorical_cols)} categorical columns: {categorical_cols}"
+        )
         le = LabelEncoder()
         for col in categorical_cols:
             # Handle NaN values by converting to string first
