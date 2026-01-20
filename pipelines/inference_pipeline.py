@@ -214,10 +214,8 @@ def inference_flow(
             )
         else:
             # Fallback: use all numeric columns (may cause shape mismatch)
-            logger.warning(
-                f"Feature names file not found at {feature_file}, "
-                "using all numeric columns"
-            )
+            msg = f"Feature names file not found at {feature_file}"
+            logger.warning(f"{msg}, using all numeric columns")
             feature_names = df.select_dtypes(include=[np.number]).columns.tolist()
 
     # Preprocess
