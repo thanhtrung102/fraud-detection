@@ -249,6 +249,13 @@ def training_flow(
         # Save model
         model_dir = save_model(model)
 
+        # Save feature names for inference
+        import json
+
+        with open(f"{model_dir}/feature_names.json", "w") as f:
+            json.dump(feature_names, f)
+        logger.info(f"Saved {len(feature_names)} feature names to {model_dir}/feature_names.json")
+
         # Log artifacts
         log_artifacts("results", "plots")
         log_artifacts(model_dir, "model")

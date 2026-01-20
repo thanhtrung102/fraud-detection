@@ -178,13 +178,20 @@ def inference_flow(
     # Load data
     df = load_inference_data(data_path)
 
-    # Use default features if not provided
+    # Load feature names from model directory
     if feature_names is None:
-        # Try to load from config or use all numeric columns
-        config = load_config()
-        feature_names = config.get(
-            "feature_names", df.select_dtypes(include=[np.number]).columns.tolist()
-        )
+        import json
+        from pathlib import Path
+
+        feature_file = Path(model_dir) / "feature_names.json"
+        if feature_file.exists():
+            with open(feature_file) as f:
+                feature_names = json.load(f)
+            logger.info(f"Loaded {len(feature_names)} feature names from {feature_file}")
+        else:
+            # Fallback: use all numeric columns (may cause shape mismatch)
+            logger.warning(f"Feature names file not found at {feature_file}, using all numeric columns")
+            feature_names = df.select_dtypes(include=[np.number]).columns.tolist()
 
     # Preprocess
     X = preprocess_inference_data(df, feature_names)
