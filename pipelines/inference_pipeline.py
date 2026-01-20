@@ -204,9 +204,58 @@ def inference_flow(
 
 
 if __name__ == "__main__":
-    # Example usage
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Fraud Detection Inference Pipeline")
+    parser.add_argument(
+        "--data-path",
+        type=str,
+        default="data/train_transaction.csv",
+        help="Path to input data CSV (default: data/train_transaction.csv)",
+    )
+    parser.add_argument(
+        "--model-dir",
+        type=str,
+        default="models",
+        help="Directory containing trained model (default: models)",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default="results/predictions.csv",
+        help="Path for output predictions (default: results/predictions.csv)",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.44,
+        help="Classification threshold (default: 0.44)",
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=1000,
+        help="Number of rows to sample for inference (default: 1000, use 0 for all)",
+    )
+    args = parser.parse_args()
+
+    # Sample data if needed to avoid memory issues
+    if args.sample_size > 0:
+        import pandas as pd
+
+        print(f"Sampling {args.sample_size} rows from {args.data_path}...")
+        df = pd.read_csv(args.data_path, nrows=args.sample_size)
+        sample_path = "data/inference_sample.csv"
+        df.to_csv(sample_path, index=False)
+        data_path = sample_path
+    else:
+        data_path = args.data_path
+
     result = inference_flow(
-        data_path="data/test_transactions.csv", model_dir="models", threshold=0.44
+        data_path=data_path,
+        model_dir=args.model_dir,
+        output_path=args.output_path,
+        threshold=args.threshold,
     )
 
     print("\nInference Results:")
