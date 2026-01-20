@@ -55,7 +55,10 @@ def load_data(transaction_path: str, identity_path: str, sample_size: int = None
         Merged DataFrame
     """
     print("Loading transaction data...")
-    train_transaction = pd.read_csv(transaction_path)
+    # Use nrows to limit memory during loading if sample_size is specified
+    # Load more rows than sample_size to allow for stratified sampling later
+    nrows = sample_size * 2 if sample_size else None
+    train_transaction = pd.read_csv(transaction_path, nrows=nrows)
     train_transaction = reduce_memory(train_transaction)
 
     print("Loading identity data...")
