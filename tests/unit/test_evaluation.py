@@ -3,15 +3,16 @@ Unit Tests for Evaluation Module
 ================================
 """
 
-import pytest
-import numpy as np
 import sys
 from pathlib import Path
+
+import numpy as np
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.evaluation import compute_metrics, compare_with_paper
+from src.evaluation import compare_with_paper, compute_metrics
 
 
 class TestComputeMetrics:
@@ -68,8 +69,12 @@ class TestComputeMetrics:
         assert "true_positives" in cm
 
         # Check totals
-        total = (cm["true_negatives"] + cm["false_positives"] +
-                 cm["false_negatives"] + cm["true_positives"])
+        total = (
+            cm["true_negatives"]
+            + cm["false_positives"]
+            + cm["false_negatives"]
+            + cm["true_positives"]
+        )
         assert total == len(y_true)
 
     def test_no_proba(self):
@@ -93,7 +98,7 @@ class TestCompareWithPaper:
             "precision": 0.95,
             "recall": 0.90,
             "f1_score": 0.92,
-            "auc_roc": 0.97
+            "auc_roc": 0.97,
         }
 
         comparison = compare_with_paper(metrics)
@@ -107,16 +112,13 @@ class TestCompareWithPaper:
     def test_within_tolerance(self):
         """Test tolerance checking."""
         # Close to paper results
-        metrics = {
-            "accuracy": 0.98,
-            "auc_roc": 0.98
-        }
+        metrics = {"accuracy": 0.98, "auc_roc": 0.98}
 
         comparison = compare_with_paper(metrics)
 
         # 2% tolerance
-        assert comparison["accuracy"]["within_tolerance"] == True
-        assert comparison["auc_roc"]["within_tolerance"] == True
+        assert comparison["accuracy"]["within_tolerance"] is True
+        assert comparison["auc_roc"]["within_tolerance"] is True
 
 
 if __name__ == "__main__":

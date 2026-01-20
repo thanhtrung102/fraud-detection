@@ -5,9 +5,10 @@ Pydantic Schemas
 Request and response models for the fraud detection API.
 """
 
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel, Field
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class TransactionFeatures(BaseModel):
@@ -80,7 +81,7 @@ class PredictionRequest(BaseModel):
 class BatchPredictionRequest(BaseModel):
     """Request model for batch predictions."""
 
-    transactions: List[TransactionFeatures]
+    transactions: list[TransactionFeatures]
     threshold: Optional[float] = Field(0.44, ge=0, le=1, description="Classification threshold")
 
 
@@ -97,7 +98,7 @@ class PredictionResponse(BaseModel):
 class BatchPredictionResponse(BaseModel):
     """Response model for batch predictions."""
 
-    predictions: List[PredictionResponse]
+    predictions: list[PredictionResponse]
     total_count: int
     fraud_count: int
     fraud_rate: float
@@ -120,7 +121,7 @@ class ModelInfoResponse(BaseModel):
     version: str
     features_count: int
     threshold: float
-    metrics: Dict[str, float]
+    metrics: dict[str, float]
     last_updated: Optional[datetime] = None
 
 

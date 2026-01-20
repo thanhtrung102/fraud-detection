@@ -6,14 +6,14 @@ Implements the stacking ensemble with XGBoost, LightGBM, and CatBoost
 base learners and XGBoost meta-learner.
 """
 
-import numpy as np
-import pandas as pd
-from xgboost import XGBClassifier
-from lightgbm import LGBMClassifier
-from catboost import CatBoostClassifier
-from sklearn.model_selection import cross_val_predict, StratifiedKFold
-import joblib
 from pathlib import Path
+
+import joblib
+import numpy as np
+from catboost import CatBoostClassifier
+from lightgbm import LGBMClassifier
+from sklearn.model_selection import StratifiedKFold, cross_val_predict
+from xgboost import XGBClassifier
 
 
 class StackingFraudDetector:
@@ -24,8 +24,13 @@ class StackingFraudDetector:
     Meta-learner: XGBoost
     """
 
-    def __init__(self, xgb_params: dict = None, lgbm_params: dict = None,
-                 catboost_params: dict = None, meta_params: dict = None):
+    def __init__(
+        self,
+        xgb_params: dict = None,
+        lgbm_params: dict = None,
+        catboost_params: dict = None,
+        meta_params: dict = None,
+    ):
         """
         Initialize stacking ensemble.
 
@@ -37,36 +42,36 @@ class StackingFraudDetector:
         """
         # Default XGBoost params
         self.xgb_params = xgb_params or {
-            'n_estimators': 300,
-            'max_depth': 7,
-            'learning_rate': 0.1,
-            'random_state': 42
+            "n_estimators": 300,
+            "max_depth": 7,
+            "learning_rate": 0.1,
+            "random_state": 42,
         }
 
         # Default LightGBM params
         self.lgbm_params = lgbm_params or {
-            'n_estimators': 300,
-            'max_depth': 7,
-            'learning_rate': 0.1,
-            'random_state': 42,
-            'verbose': -1
+            "n_estimators": 300,
+            "max_depth": 7,
+            "learning_rate": 0.1,
+            "random_state": 42,
+            "verbose": -1,
         }
 
         # Default CatBoost params
         self.catboost_params = catboost_params or {
-            'iterations': 300,
-            'depth': 7,
-            'learning_rate': 0.1,
-            'random_seed': 42,
-            'verbose': 0
+            "iterations": 300,
+            "depth": 7,
+            "learning_rate": 0.1,
+            "random_seed": 42,
+            "verbose": 0,
         }
 
         # Default meta-learner params
         self.meta_params = meta_params or {
-            'n_estimators': 100,
-            'max_depth': 4,
-            'learning_rate': 0.1,
-            'random_state': 42
+            "n_estimators": 100,
+            "max_depth": 4,
+            "learning_rate": 0.1,
+            "random_state": 42,
         }
 
         # Initialize models
@@ -118,13 +123,13 @@ class StackingFraudDetector:
             cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=42)
 
             xgb_cv = cross_val_predict(
-                XGBClassifier(**self.xgb_params), X, y, cv=cv, method='predict_proba'
+                XGBClassifier(**self.xgb_params), X, y, cv=cv, method="predict_proba"
             )[:, 1]
             lgbm_cv = cross_val_predict(
-                LGBMClassifier(**self.lgbm_params), X, y, cv=cv, method='predict_proba'
+                LGBMClassifier(**self.lgbm_params), X, y, cv=cv, method="predict_proba"
             )[:, 1]
             catboost_cv = cross_val_predict(
-                CatBoostClassifier(**self.catboost_params), X, y, cv=cv, method='predict_proba'
+                CatBoostClassifier(**self.catboost_params), X, y, cv=cv, method="predict_proba"
             )[:, 1]
 
             meta_train = np.column_stack([xgb_cv, lgbm_cv, catboost_cv])
@@ -173,26 +178,25 @@ class StackingFraudDetector:
         path = Path(path)
         path.mkdir(parents=True, exist_ok=True)
 
-        joblib.dump(self.xgb_model, path / 'xgb_model.joblib')
-        joblib.dump(self.lgbm_model, path / 'lgbm_model.joblib')
-        joblib.dump(self.catboost_model, path / 'catboost_model.joblib')
-        joblib.dump(self.meta_learner, path / 'meta_learner.joblib')
+        joblib.dump(self.xgb_model, path / "xgb_model.joblib")
+        joblib.dump(self.lgbm_model, path / "lgbm_model.joblib")
+        joblib.dump(self.catboost_model, path / "catboost_model.joblib")
+        joblib.dump(self.meta_learner, path / "meta_learner.joblib")
         print(f"Models saved to {path}")
 
     def load(self, path: str):
         """Load the ensemble from disk."""
         path = Path(path)
 
-        self.xgb_model = joblib.load(path / 'xgb_model.joblib')
-        self.lgbm_model = joblib.load(path / 'lgbm_model.joblib')
-        self.catboost_model = joblib.load(path / 'catboost_model.joblib')
-        self.meta_learner = joblib.load(path / 'meta_learner.joblib')
+        self.xgb_model = joblib.load(path / "xgb_model.joblib")
+        self.lgbm_model = joblib.load(path / "lgbm_model.joblib")
+        self.catboost_model = joblib.load(path / "catboost_model.joblib")
+        self.meta_learner = joblib.load(path / "meta_learner.joblib")
         self.is_fitted = True
         print(f"Models loaded from {path}")
 
 
-def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray,
-                          metric: str = 'f1') -> tuple:
+def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray, metric: str = "f1") -> tuple:
     """
     Find optimal classification threshold.
 
@@ -206,11 +210,7 @@ def find_optimal_threshold(y_true: np.ndarray, y_proba: np.ndarray,
     """
     from sklearn.metrics import f1_score, precision_score, recall_score
 
-    metric_funcs = {
-        'f1': f1_score,
-        'precision': precision_score,
-        'recall': recall_score
-    }
+    metric_funcs = {"f1": f1_score, "precision": precision_score, "recall": recall_score}
 
     metric_func = metric_funcs[metric]
 
@@ -232,8 +232,7 @@ if __name__ == "__main__":
     # Quick test
     from sklearn.datasets import make_classification
 
-    X, y = make_classification(n_samples=1000, n_features=20,
-                               n_classes=2, random_state=42)
+    X, y = make_classification(n_samples=1000, n_features=20, n_classes=2, random_state=42)
 
     model = StackingFraudDetector()
     model.fit(X, y)

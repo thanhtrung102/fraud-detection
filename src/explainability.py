@@ -5,11 +5,12 @@ Explainability Module
 SHAP, LIME, and Partial Dependence Plot analysis for model interpretability.
 """
 
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import shap
-from pathlib import Path
 
 
 def compute_shap_values(model, X: np.ndarray, feature_names: list = None):
@@ -31,8 +32,7 @@ def compute_shap_values(model, X: np.ndarray, feature_names: list = None):
     return explainer, shap_values
 
 
-def get_top_features_shap(shap_values: np.ndarray, feature_names: list,
-                          n_top: int = 30) -> list:
+def get_top_features_shap(shap_values: np.ndarray, feature_names: list, n_top: int = 30) -> list:
     """
     Get top N features by mean absolute SHAP value.
 
@@ -45,12 +45,11 @@ def get_top_features_shap(shap_values: np.ndarray, feature_names: list,
         List of top feature names
     """
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
-    feature_importance = pd.DataFrame({
-        'feature': feature_names,
-        'importance': mean_abs_shap
-    }).sort_values('importance', ascending=False)
+    feature_importance = pd.DataFrame(
+        {"feature": feature_names, "importance": mean_abs_shap}
+    ).sort_values("importance", ascending=False)
 
-    top_features = feature_importance.head(n_top)['feature'].tolist()
+    top_features = feature_importance.head(n_top)["feature"].tolist()
 
     print(f"\nTop {n_top} features by SHAP importance:")
     for i, (_, row) in enumerate(feature_importance.head(10).iterrows(), 1):
@@ -59,8 +58,9 @@ def get_top_features_shap(shap_values: np.ndarray, feature_names: list,
     return top_features
 
 
-def plot_shap_summary(shap_values: np.ndarray, X: np.ndarray,
-                     feature_names: list = None, save_path: str = None):
+def plot_shap_summary(
+    shap_values: np.ndarray, X: np.ndarray, feature_names: list = None, save_path: str = None
+):
     """
     Create SHAP summary plot.
 
@@ -81,14 +81,13 @@ def plot_shap_summary(shap_values: np.ndarray, X: np.ndarray,
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"SHAP summary plot saved to {save_path}")
 
     plt.close()
 
 
-def plot_shap_bar(shap_values: np.ndarray, feature_names: list,
-                 save_path: str = None):
+def plot_shap_bar(shap_values: np.ndarray, feature_names: list, save_path: str = None):
     """
     Create SHAP bar plot (feature importance).
 
@@ -98,28 +97,28 @@ def plot_shap_bar(shap_values: np.ndarray, feature_names: list,
         save_path: Path to save plot
     """
     mean_abs_shap = np.abs(shap_values).mean(axis=0)
-    feature_importance = pd.DataFrame({
-        'feature': feature_names,
-        'importance': mean_abs_shap
-    }).sort_values('importance', ascending=True).tail(20)
+    feature_importance = (
+        pd.DataFrame({"feature": feature_names, "importance": mean_abs_shap})
+        .sort_values("importance", ascending=True)
+        .tail(20)
+    )
 
     plt.figure(figsize=(10, 8))
-    plt.barh(feature_importance['feature'], feature_importance['importance'])
-    plt.xlabel('Mean |SHAP value|')
-    plt.title('Top 20 Feature Importances (SHAP)')
+    plt.barh(feature_importance["feature"], feature_importance["importance"])
+    plt.xlabel("Mean |SHAP value|")
+    plt.title("Top 20 Feature Importances (SHAP)")
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"SHAP bar plot saved to {save_path}")
 
     plt.close()
 
 
-def explain_single_prediction_lime(model, X_train: np.ndarray,
-                                   X_instance: np.ndarray,
-                                   feature_names: list,
-                                   save_path: str = None):
+def explain_single_prediction_lime(
+    model, X_train: np.ndarray, X_instance: np.ndarray, feature_names: list, save_path: str = None
+):
     """
     Generate LIME explanation for a single prediction.
 
@@ -138,15 +137,11 @@ def explain_single_prediction_lime(model, X_train: np.ndarray,
     explainer = lime.lime_tabular.LimeTabularExplainer(
         X_train,
         feature_names=feature_names,
-        class_names=['Legitimate', 'Fraud'],
-        mode='classification'
+        class_names=["Legitimate", "Fraud"],
+        mode="classification",
     )
 
-    exp = explainer.explain_instance(
-        X_instance,
-        model.predict_proba,
-        num_features=10
-    )
+    exp = explainer.explain_instance(X_instance, model.predict_proba, num_features=10)
 
     if save_path:
         exp.save_to_file(save_path)
@@ -155,9 +150,9 @@ def explain_single_prediction_lime(model, X_train: np.ndarray,
     return exp
 
 
-def plot_partial_dependence(model, X: np.ndarray, feature_names: list,
-                           features_to_plot: list = None,
-                           save_path: str = None):
+def plot_partial_dependence(
+    model, X: np.ndarray, feature_names: list, features_to_plot: list = None, save_path: str = None
+):
     """
     Create Partial Dependence Plots.
 
@@ -181,23 +176,23 @@ def plot_partial_dependence(model, X: np.ndarray, feature_names: list,
 
     X_df = pd.DataFrame(X, columns=feature_names)
 
-    display = PartialDependenceDisplay.from_estimator(
-        model, X_df, features=feature_indices,
-        ax=axes, grid_resolution=50
+    PartialDependenceDisplay.from_estimator(
+        model, X_df, features=feature_indices, ax=axes, grid_resolution=50
     )
 
-    plt.suptitle('Partial Dependence Plots', fontsize=14)
+    plt.suptitle("Partial Dependence Plots", fontsize=14)
     plt.tight_layout()
 
     if save_path:
-        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"PDP saved to {save_path}")
 
     plt.close()
 
 
-def compute_permutation_importance(model, X: np.ndarray, y: np.ndarray,
-                                   feature_names: list, n_repeats: int = 10):
+def compute_permutation_importance(
+    model, X: np.ndarray, y: np.ndarray, feature_names: list, n_repeats: int = 10
+):
     """
     Compute permutation feature importance.
 
@@ -214,26 +209,36 @@ def compute_permutation_importance(model, X: np.ndarray, y: np.ndarray,
     from sklearn.inspection import permutation_importance
 
     print("Computing permutation importance...")
-    result = permutation_importance(model, X, y, n_repeats=n_repeats,
-                                   random_state=42, scoring='roc_auc')
+    result = permutation_importance(
+        model, X, y, n_repeats=n_repeats, random_state=42, scoring="roc_auc"
+    )
 
-    importance_df = pd.DataFrame({
-        'feature': feature_names,
-        'importance_mean': result.importances_mean,
-        'importance_std': result.importances_std
-    }).sort_values('importance_mean', ascending=False)
+    importance_df = pd.DataFrame(
+        {
+            "feature": feature_names,
+            "importance_mean": result.importances_mean,
+            "importance_std": result.importances_std,
+        }
+    ).sort_values("importance_mean", ascending=False)
 
     print("\nTop 10 features by permutation importance:")
     for i, (_, row) in enumerate(importance_df.head(10).iterrows(), 1):
-        print(f"  {i}. {row['feature']}: {row['importance_mean']:.4f} "
-              f"(+/- {row['importance_std']:.4f})")
+        print(
+            f"  {i}. {row['feature']}: {row['importance_mean']:.4f} "
+            f"(+/- {row['importance_std']:.4f})"
+        )
 
     return importance_df
 
 
-def generate_all_explanations(model, X_train: np.ndarray, X_test: np.ndarray,
-                             y_test: np.ndarray, feature_names: list,
-                             output_dir: str = 'results'):
+def generate_all_explanations(
+    model,
+    X_train: np.ndarray,
+    X_test: np.ndarray,
+    y_test: np.ndarray,
+    feature_names: list,
+    output_dir: str = "results",
+):
     """
     Generate all explainability artifacts.
 
@@ -252,31 +257,34 @@ def generate_all_explanations(model, X_train: np.ndarray, X_test: np.ndarray,
     explainer, shap_values = compute_shap_values(model, X_test, feature_names)
     top_features = get_top_features_shap(shap_values, feature_names, n_top=30)
 
-    plot_shap_summary(shap_values, X_test, feature_names,
-                     str(output_dir / 'shap_summary.png'))
-    plot_shap_bar(shap_values, feature_names,
-                 str(output_dir / 'shap_bar.png'))
+    plot_shap_summary(shap_values, X_test, feature_names, str(output_dir / "shap_summary.png"))
+    plot_shap_bar(shap_values, feature_names, str(output_dir / "shap_bar.png"))
 
     # Find a fraud case for LIME
     fraud_indices = np.where(y_test == 1)[0]
     if len(fraud_indices) > 0:
         fraud_idx = fraud_indices[0]
         explain_single_prediction_lime(
-            model, X_train, X_test[fraud_idx], feature_names,
-            str(output_dir / 'lime_explanation.html')
+            model,
+            X_train,
+            X_test[fraud_idx],
+            feature_names,
+            str(output_dir / "lime_explanation.html"),
         )
 
     # Partial dependence (use top 4 features)
     if len(top_features) >= 4:
-        plot_partial_dependence(model, X_test, feature_names,
-                               top_features[:4],
-                               str(output_dir / 'partial_dependence.png'))
+        plot_partial_dependence(
+            model,
+            X_test,
+            feature_names,
+            top_features[:4],
+            str(output_dir / "partial_dependence.png"),
+        )
 
     # Permutation importance
-    perm_importance = compute_permutation_importance(
-        model, X_test, y_test, feature_names
-    )
-    perm_importance.to_csv(output_dir / 'permutation_importance.csv', index=False)
+    perm_importance = compute_permutation_importance(model, X_test, y_test, feature_names)
+    perm_importance.to_csv(output_dir / "permutation_importance.csv", index=False)
 
     print(f"\nAll explanations saved to {output_dir}")
     return top_features

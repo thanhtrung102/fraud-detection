@@ -11,37 +11,42 @@ Target Metrics: 99% Accuracy, 0.99 AUC-ROC, 0.99 Precision, 0.99 Recall, 0.99 F1
 
 import sys
 import time
-import numpy as np
 from pathlib import Path
 
 # Support both: python src/main.py AND python -m src.main
 try:
-    from .data_preprocessing import preprocess_pipeline, load_config
-    from .feature_selection import shap_feature_selection, apply_feature_selection
-    from .optuna_tuning import tune_all_models
-    from .stacking_model import StackingFraudDetector, find_optimal_threshold
+    from .data_preprocessing import load_config, preprocess_pipeline
     from .evaluation import (
-        compute_metrics, print_results, generate_all_plots, save_results
+        compute_metrics,
+        generate_all_plots,
+        print_results,
+        save_results,
     )
     from .explainability import generate_all_explanations
+    from .feature_selection import apply_feature_selection, shap_feature_selection
+    from .optuna_tuning import tune_all_models
+    from .stacking_model import StackingFraudDetector, find_optimal_threshold
 except ImportError:
-    from data_preprocessing import preprocess_pipeline, load_config
-    from feature_selection import shap_feature_selection, apply_feature_selection
-    from optuna_tuning import tune_all_models
-    from stacking_model import StackingFraudDetector, find_optimal_threshold
+    from data_preprocessing import load_config, preprocess_pipeline
     from evaluation import (
-        compute_metrics, print_results, generate_all_plots, save_results
+        compute_metrics,
+        generate_all_plots,
+        print_results,
+        save_results,
     )
     from explainability import generate_all_explanations
+    from feature_selection import apply_feature_selection, shap_feature_selection
+    from optuna_tuning import tune_all_models
+    from stacking_model import StackingFraudDetector, find_optimal_threshold
 
 
 # Paper target metrics
 SUCCESS_METRICS = {
-    'accuracy': 0.99,
-    'auc_roc': 0.99,
-    'precision': 0.99,
-    'recall': 0.99,
-    'f1_score': 0.99
+    "accuracy": 0.99,
+    "auc_roc": 0.99,
+    "precision": 0.99,
+    "recall": 0.99,
+    "f1_score": 0.99,
 }
 
 
@@ -71,11 +76,7 @@ def validate_metrics(metrics: dict, targets: dict = SUCCESS_METRICS) -> dict:
         if not passed:
             all_passed = False
 
-        results[metric] = {
-            'achieved': achieved,
-            'target': target,
-            'passed': passed
-        }
+        results[metric] = {"achieved": achieved, "target": target, "passed": passed}
         print(f"  {metric:<12} {achieved:>10.4f} {target:>10.2f} {status:>10}")
 
     print("-" * 60)
@@ -103,12 +104,12 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
     config = load_config()
 
     # Check if Optuna/feature selection are enabled in config
-    optuna_config = config.get('optuna', {})
-    feature_config = config.get('feature_selection', {})
+    optuna_config = config.get("optuna", {})
+    feature_config = config.get("feature_selection", {})
 
-    n_trials = optuna_config.get('n_trials', 20)
-    n_top_features = feature_config.get('n_top_features', 30)
-    shap_sample_size = feature_config.get('shap_sample_size', 50000)
+    n_trials = optuna_config.get("n_trials", 20)
+    n_top_features = feature_config.get("n_top_features", 30)
+    shap_sample_size = feature_config.get("shap_sample_size", 50000)
 
     # Phase 1: Data Preprocessing
     print("\n[1/6] Loading and preprocessing data...")
@@ -117,10 +118,10 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
     X_train, X_test, y_train, y_test, feature_names = preprocess_pipeline(config)
 
     # Convert to numpy if needed
-    X_train_np = X_train.values if hasattr(X_train, 'values') else X_train
-    X_test_np = X_test.values if hasattr(X_test, 'values') else X_test
-    y_train_np = y_train.values if hasattr(y_train, 'values') else y_train
-    y_test_np = y_test.values if hasattr(y_test, 'values') else y_test
+    X_train_np = X_train.values if hasattr(X_train, "values") else X_train
+    X_test_np = X_test.values if hasattr(X_test, "values") else X_test
+    y_train_np = y_train.values if hasattr(y_train, "values") else y_train
+    y_test_np = y_test.values if hasattr(y_test, "values") else y_test
 
     preprocess_time = time.time() - start_time
     print(f"      Preprocessing completed in {preprocess_time:.2f}s")
@@ -131,9 +132,11 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
         start_time = time.time()
 
         feature_indices, selected_features, importance_df = shap_feature_selection(
-            X_train_np, y_train_np, feature_names,
+            X_train_np,
+            y_train_np,
+            feature_names,
             n_top_features=n_top_features,
-            sample_size=shap_sample_size
+            sample_size=shap_sample_size,
         )
 
         # Apply feature selection
@@ -154,24 +157,25 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
         start_time = time.time()
 
         best_params = tune_all_models(
-            X_train_selected, y_train_np,
+            X_train_selected,
+            y_train_np,
             n_trials=n_trials,
-            cv_folds=config.get('cross_validation', {}).get('n_splits', 5),
-            random_state=config.get('data', {}).get('random_state', 42)
+            cv_folds=config.get("cross_validation", {}).get("n_splits", 5),
+            random_state=config.get("data", {}).get("random_state", 42),
         )
 
         # Use tuned parameters
-        xgb_params = best_params['xgboost']
-        lgbm_params = best_params['lightgbm']
-        catboost_params = best_params['catboost']
+        xgb_params = best_params["xgboost"]
+        lgbm_params = best_params["lightgbm"]
+        catboost_params = best_params["catboost"]
 
         optuna_time = time.time() - start_time
         print(f"      Hyperparameter tuning completed in {optuna_time:.2f}s")
     else:
         print("\n[3/6] Using default hyperparameters...")
-        xgb_params = config.get('base_models', {}).get('xgboost')
-        lgbm_params = config.get('base_models', {}).get('lightgbm')
-        catboost_params = config.get('base_models', {}).get('catboost')
+        xgb_params = config.get("base_models", {}).get("xgboost")
+        lgbm_params = config.get("base_models", {}).get("lightgbm")
+        catboost_params = config.get("base_models", {}).get("catboost")
 
     # Phase 4: Model Training
     print("\n[4/6] Training stacking ensemble...")
@@ -181,7 +185,7 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
         xgb_params=xgb_params,
         lgbm_params=lgbm_params,
         catboost_params=catboost_params,
-        meta_params=config.get('meta_learner')
+        meta_params=config.get("meta_learner"),
     )
     model.fit(X_train_selected, y_train_np)
 
@@ -192,7 +196,7 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
     print("\n[5/6] Generating predictions...")
 
     y_proba = model.predict_proba(X_test_selected)[:, 1]
-    optimal_threshold, _ = find_optimal_threshold(y_test_np, y_proba, metric='f1')
+    optimal_threshold, _ = find_optimal_threshold(y_test_np, y_proba, metric="f1")
     y_pred = (y_proba >= optimal_threshold).astype(int)
 
     # Phase 6: Evaluation
@@ -205,7 +209,7 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
     validation_results = validate_metrics(metrics)
 
     # Save results
-    output_dir = Path(config.get('output', {}).get('results_dir', 'results'))
+    output_dir = Path(config.get("output", {}).get("results_dir", "results"))
     output_dir.mkdir(parents=True, exist_ok=True)
 
     generate_all_plots(y_test_np, y_pred, y_proba, str(output_dir))
@@ -213,18 +217,18 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
 
     # Generate explainability reports
     print("\n[BONUS] Generating explainability reports...")
-    top_features = generate_all_explanations(
+    generate_all_explanations(
         model.xgb_model,
         X_train_selected,
         X_test_selected,
         y_test_np,
         feature_names,
-        str(output_dir)
+        str(output_dir),
     )
 
     # Save model
-    if config.get('output', {}).get('save_models', True):
-        models_dir = config.get('output', {}).get('models_dir', 'models')
+    if config.get("output", {}).get("save_models", True):
+        models_dir = config.get("output", {}).get("models_dir", "models")
         model.save(models_dir)
 
     # Summary
@@ -245,10 +249,10 @@ def main(use_optuna: bool = True, use_feature_selection: bool = True):
 
 if __name__ == "__main__":
     # Parse command line arguments
-    use_optuna = '--no-optuna' not in sys.argv
-    use_feature_selection = '--no-feature-selection' not in sys.argv
+    use_optuna = "--no-optuna" not in sys.argv
+    use_feature_selection = "--no-feature-selection" not in sys.argv
 
-    if '--help' in sys.argv or '-h' in sys.argv:
+    if "--help" in sys.argv or "-h" in sys.argv:
         print("Usage: python -m src.main [options]")
         print("\nOptions:")
         print("  --no-optuna             Skip Optuna hyperparameter tuning")
@@ -257,6 +261,5 @@ if __name__ == "__main__":
         sys.exit(0)
 
     model, metrics, validation = main(
-        use_optuna=use_optuna,
-        use_feature_selection=use_feature_selection
+        use_optuna=use_optuna, use_feature_selection=use_feature_selection
     )

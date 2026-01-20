@@ -6,12 +6,12 @@ Prefect flow for batch inference with model monitoring.
 """
 
 import sys
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Any, Optional, List
+from pathlib import Path
+from typing import Any, Optional
+
 import numpy as np
 import pandas as pd
-
 from prefect import flow, task
 from prefect.logging import get_run_logger
 
@@ -19,7 +19,6 @@ from prefect.logging import get_run_logger
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.stacking_model import StackingFraudDetector
-from src.data_preprocessing import load_config
 
 
 @task(name="load_model", retries=2)
@@ -49,14 +48,15 @@ def load_inference_data(data_path: str) -> pd.DataFrame:
 
 @task(name="preprocess_inference_data")
 def preprocess_inference_data(
-    df: pd.DataFrame,
-    feature_names: List[str]
+    df: pd.DataFrame, feature_names: list[str]
 ) -> np.ndarray:
-    """Preprocess data for inference."""
+    """Preprocess data for inference with encoding for categorical features."""
     logger = get_run_logger()
+    from sklearn.preprocessing import LabelEncoder
+
+    df = df.copy()
 
     # Select only required features
-    available_features = [f for f in feature_names if f in df.columns]
     missing_features = [f for f in feature_names if f not in df.columns]
 
     if missing_features:
@@ -65,7 +65,24 @@ def preprocess_inference_data(
         for f in missing_features:
             df[f] = 0
 
-    X = df[feature_names].values
+    # Select the features we need
+    df_features = df[feature_names].copy()
+
+    # Encode categorical columns (same as training preprocessing)
+    categorical_cols = df_features.select_dtypes(include=["object"]).columns.tolist()
+    if categorical_cols:
+        logger.info(
+            f"Encoding {len(categorical_cols)} categorical columns: {categorical_cols}"
+        )
+        le = LabelEncoder()
+        for col in categorical_cols:
+            # Handle NaN values by converting to string first
+            df_features[col] = le.fit_transform(df_features[col].astype(str))
+
+    # Fill any remaining NaN values with 0
+    df_features = df_features.fillna(0)
+
+    X = df_features.values
     logger.info(f"Preprocessed data shape: {X.shape}")
 
     return X
@@ -73,10 +90,8 @@ def preprocess_inference_data(
 
 @task(name="run_inference")
 def run_inference(
-    model: StackingFraudDetector,
-    X: np.ndarray,
-    threshold: float = 0.44
-) -> Dict[str, np.ndarray]:
+    model: StackingFraudDetector, X: np.ndarray, threshold: float = 0.44
+) -> dict[str, np.ndarray]:
     """Run inference on data."""
     logger = get_run_logger()
     logger.info(f"Running inference on {X.shape[0]} samples")
@@ -90,17 +105,12 @@ def run_inference(
 
     logger.info(f"Predictions: {n_fraud} fraud ({fraud_rate:.2%})")
 
-    return {
-        "probabilities": y_proba,
-        "predictions": y_pred
-    }
+    return {"probabilities": y_proba, "predictions": y_pred}
 
 
 @task(name="save_predictions")
 def save_predictions(
-    df: pd.DataFrame,
-    predictions: Dict[str, np.ndarray],
-    output_path: str
+    df: pd.DataFrame, predictions: dict[str, np.ndarray], output_path: str
 ) -> str:
     """Save predictions to file."""
     logger = get_run_logger()
@@ -120,9 +130,8 @@ def save_predictions(
 
 @task(name="generate_inference_report")
 def generate_inference_report(
-    predictions: Dict[str, np.ndarray],
-    output_dir: str = "results"
-) -> Dict[str, Any]:
+    predictions: dict[str, np.ndarray], output_dir: str = "results"
+) -> dict[str, Any]:
     """Generate inference summary report."""
     logger = get_run_logger()
 
@@ -139,13 +148,15 @@ def generate_inference_report(
         "max_fraud_probability": float(y_proba.max()),
         "high_risk_count": int((y_proba > 0.8).sum()),
         "medium_risk_count": int(((y_proba > 0.5) & (y_proba <= 0.8)).sum()),
-        "low_risk_count": int((y_proba <= 0.5).sum())
+        "low_risk_count": int((y_proba <= 0.5).sum()),
     }
 
     # Save report
     import json
+
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    report_path = Path(output_dir) / f"inference_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = Path(output_dir) / f"inference_report_{timestamp}.json"
 
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
@@ -159,9 +170,9 @@ def inference_flow(
     data_path: str,
     model_dir: str = "models",
     output_path: Optional[str] = None,
-    feature_names: Optional[List[str]] = None,
-    threshold: float = 0.44
-) -> Dict[str, Any]:
+    feature_names: Optional[list[str]] = None,
+    threshold: float = 0.44,
+) -> dict[str, Any]:
     """
     Batch inference pipeline flow.
 
@@ -180,7 +191,7 @@ def inference_flow(
 
     # Set default output path
     if output_path is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = f"results/predictions_{timestamp}.csv"
 
     # Load model
@@ -189,11 +200,23 @@ def inference_flow(
     # Load data
     df = load_inference_data(data_path)
 
-    # Use default features if not provided
+    # Load feature names from model directory
     if feature_names is None:
-        # Try to load from config or use all numeric columns
-        config = load_config()
-        feature_names = config.get("feature_names", df.select_dtypes(include=[np.number]).columns.tolist())
+        import json
+        from pathlib import Path
+
+        feature_file = Path(model_dir) / "feature_names.json"
+        if feature_file.exists():
+            with open(feature_file) as f:
+                feature_names = json.load(f)
+            logger.info(
+                f"Loaded {len(feature_names)} feature names from {feature_file}"
+            )
+        else:
+            # Fallback: use all numeric columns (may cause shape mismatch)
+            msg = f"Feature names file not found at {feature_file}"
+            logger.warning(f"{msg}, using all numeric columns")
+            feature_names = df.select_dtypes(include=[np.number]).columns.tolist()
 
     # Preprocess
     X = preprocess_inference_data(df, feature_names)
@@ -209,22 +232,65 @@ def inference_flow(
 
     logger.info("Inference pipeline complete")
 
-    return {
-        "output_path": output_path,
-        "report": report,
-        "total_processed": len(df)
-    }
+    return {"output_path": output_path, "report": report, "total_processed": len(df)}
 
 
 if __name__ == "__main__":
-    # Example usage
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Fraud Detection Inference Pipeline")
+    parser.add_argument(
+        "--data-path",
+        type=str,
+        default="data/train_transaction.csv",
+        help="Path to input data CSV (default: data/train_transaction.csv)",
+    )
+    parser.add_argument(
+        "--model-dir",
+        type=str,
+        default="models",
+        help="Directory containing trained model (default: models)",
+    )
+    parser.add_argument(
+        "--output-path",
+        type=str,
+        default="results/predictions.csv",
+        help="Path for output predictions (default: results/predictions.csv)",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.44,
+        help="Classification threshold (default: 0.44)",
+    )
+    parser.add_argument(
+        "--sample-size",
+        type=int,
+        default=1000,
+        help="Number of rows to sample for inference (default: 1000, use 0 for all)",
+    )
+    args = parser.parse_args()
+
+    # Sample data if needed to avoid memory issues
+    if args.sample_size > 0:
+        import pandas as pd
+
+        print(f"Sampling {args.sample_size} rows from {args.data_path}...")
+        df = pd.read_csv(args.data_path, nrows=args.sample_size)
+        sample_path = "data/inference_sample.csv"
+        df.to_csv(sample_path, index=False)
+        data_path = sample_path
+    else:
+        data_path = args.data_path
+
     result = inference_flow(
-        data_path="data/test_transactions.csv",
-        model_dir="models",
-        threshold=0.44
+        data_path=data_path,
+        model_dir=args.model_dir,
+        output_path=args.output_path,
+        threshold=args.threshold,
     )
 
-    print(f"\nInference Results:")
+    print("\nInference Results:")
     print(f"  Output: {result['output_path']}")
     print(f"  Total processed: {result['total_processed']}")
     print(f"  Fraud rate: {result['report']['fraud_rate']:.2%}")

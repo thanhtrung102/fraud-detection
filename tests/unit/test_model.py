@@ -3,11 +3,12 @@ Unit Tests for Stacking Model
 =============================
 """
 
-import pytest
-import numpy as np
 import sys
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import numpy as np
+import pytest
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
@@ -37,7 +38,7 @@ class TestStackingFraudDetector:
             xgb_params={"n_estimators": 10, "max_depth": 3},
             lgbm_params={"n_estimators": 10, "max_depth": 3, "verbose": -1},
             catboost_params={"iterations": 10, "depth": 3, "verbose": 0},
-            meta_params={"n_estimators": 10, "max_depth": 2}
+            meta_params={"n_estimators": 10, "max_depth": 2},
         )
 
     def test_model_initialization(self, small_model):
@@ -121,7 +122,7 @@ class TestFindOptimalThreshold:
         y_true = np.array([0, 0, 0, 1, 1, 1, 1, 1])
         y_proba = np.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9])
 
-        threshold, score = find_optimal_threshold(y_true, y_proba, metric='f1')
+        threshold, score = find_optimal_threshold(y_true, y_proba, metric="f1")
 
         assert 0 <= threshold <= 1
         assert 0 <= score <= 1
@@ -131,7 +132,7 @@ class TestFindOptimalThreshold:
         y_true = np.array([0, 0, 0, 1, 1, 1, 1, 1])
         y_proba = np.array([0.1, 0.2, 0.3, 0.4, 0.6, 0.7, 0.8, 0.9])
 
-        threshold, score = find_optimal_threshold(y_true, y_proba, metric='precision')
+        threshold, score = find_optimal_threshold(y_true, y_proba, metric="precision")
 
         assert 0 <= threshold <= 1
 
@@ -140,8 +141,8 @@ class TestFindOptimalThreshold:
         y_true = np.array([0, 0, 1, 1])
         y_proba = np.array([0.3, 0.4, 0.6, 0.7])
 
-        threshold_low, _ = find_optimal_threshold(y_true, y_proba, metric='recall')
-        threshold_high, _ = find_optimal_threshold(y_true, y_proba, metric='precision')
+        threshold_low, _ = find_optimal_threshold(y_true, y_proba, metric="recall")
+        threshold_high, _ = find_optimal_threshold(y_true, y_proba, metric="precision")
 
         # These might be the same in this simple case, but logic is tested
         assert threshold_low is not None

@@ -5,27 +5,37 @@ Model Monitoring with Evidently
 Data drift detection and model performance monitoring.
 """
 
-import pandas as pd
-import numpy as np
-from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple
-from datetime import datetime
 import json
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional
 
-from evidently import ColumnMapping
-from evidently.report import Report
-from evidently.metric_preset import (
-    DataDriftPreset,
-    DataQualityPreset,
-    TargetDriftPreset,
-    ClassificationPreset
-)
-from evidently.metrics import (
-    DatasetDriftMetric,
-    DataDriftTable,
-    ColumnDriftMetric,
-    DatasetMissingValuesMetric
-)
+import numpy as np
+import pandas as pd
+
+# Handle different Evidently versions (0.7.x has new API structure)
+try:
+    # Evidently < 0.4.0
+    from evidently import ColumnMapping
+    from evidently.metric_preset import (
+        ClassificationPreset,
+        DataDriftPreset,
+        DataQualityPreset,
+        TargetDriftPreset,
+    )
+    from evidently.metrics import DatasetMissingValuesMetric
+    from evidently.report import Report
+except ImportError:
+    # Evidently >= 0.5.0 (moved to legacy module)
+    from evidently.legacy.metric_preset import (
+        ClassificationPreset,
+        DataDriftPreset,
+        DataQualityPreset,
+        TargetDriftPreset,
+    )
+    from evidently.legacy.metrics import DatasetMissingValuesMetric
+    from evidently.legacy.pipeline.column_mapping import ColumnMapping
+    from evidently.legacy.report import Report
 
 
 class FraudMonitor:
@@ -36,8 +46,8 @@ class FraudMonitor:
         reference_data: pd.DataFrame,
         target_column: str = "isFraud",
         prediction_column: str = "prediction",
-        numerical_features: Optional[List[str]] = None,
-        categorical_features: Optional[List[str]] = None
+        numerical_features: Optional[list[str]] = None,
+        categorical_features: Optional[list[str]] = None,
     ):
         """
         Initialize the fraud monitor.
@@ -55,18 +65,15 @@ class FraudMonitor:
 
         # Auto-detect feature types if not provided
         if numerical_features is None:
-            numerical_features = reference_data.select_dtypes(
-                include=[np.number]
-            ).columns.tolist()
+            numerical_features = reference_data.select_dtypes(include=[np.number]).columns.tolist()
             # Remove target and prediction columns
             numerical_features = [
-                f for f in numerical_features
-                if f not in [target_column, prediction_column]
+                f for f in numerical_features if f not in [target_column, prediction_column]
             ]
 
         if categorical_features is None:
             categorical_features = reference_data.select_dtypes(
-                include=['object', 'category']
+                include=["object", "category"]
             ).columns.tolist()
 
         self.numerical_features = numerical_features
@@ -77,14 +84,12 @@ class FraudMonitor:
             target=target_column,
             prediction=prediction_column,
             numerical_features=numerical_features,
-            categorical_features=categorical_features
+            categorical_features=categorical_features,
         )
 
     def generate_data_drift_report(
-        self,
-        current_data: pd.DataFrame,
-        output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+        self, current_data: pd.DataFrame, output_path: Optional[str] = None
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a data drift report.
 
@@ -95,15 +100,12 @@ class FraudMonitor:
         Returns:
             Tuple of (Report, drift_metrics_dict)
         """
-        report = Report(metrics=[
-            DataDriftPreset(),
-            DatasetMissingValuesMetric()
-        ])
+        report = Report(metrics=[DataDriftPreset(), DatasetMissingValuesMetric()])
 
         report.run(
             reference_data=self.reference_data,
             current_data=current_data,
-            column_mapping=self.column_mapping
+            column_mapping=self.column_mapping,
         )
 
         if output_path:
@@ -117,10 +119,8 @@ class FraudMonitor:
         return report, metrics
 
     def generate_model_performance_report(
-        self,
-        current_data: pd.DataFrame,
-        output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+        self, current_data: pd.DataFrame, output_path: Optional[str] = None
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a model performance report.
 
@@ -131,15 +131,12 @@ class FraudMonitor:
         Returns:
             Tuple of (Report, performance_metrics_dict)
         """
-        report = Report(metrics=[
-            ClassificationPreset(),
-            TargetDriftPreset()
-        ])
+        report = Report(metrics=[ClassificationPreset(), TargetDriftPreset()])
 
         report.run(
             reference_data=self.reference_data,
             current_data=current_data,
-            column_mapping=self.column_mapping
+            column_mapping=self.column_mapping,
         )
 
         if output_path:
@@ -152,10 +149,8 @@ class FraudMonitor:
         return report, metrics
 
     def generate_data_quality_report(
-        self,
-        current_data: pd.DataFrame,
-        output_path: Optional[str] = None
-    ) -> Tuple[Report, Dict[str, Any]]:
+        self, current_data: pd.DataFrame, output_path: Optional[str] = None
+    ) -> tuple[Report, dict[str, Any]]:
         """
         Generate a data quality report.
 
@@ -166,14 +161,12 @@ class FraudMonitor:
         Returns:
             Tuple of (Report, quality_metrics_dict)
         """
-        report = Report(metrics=[
-            DataQualityPreset()
-        ])
+        report = Report(metrics=[DataQualityPreset()])
 
         report.run(
             reference_data=self.reference_data,
             current_data=current_data,
-            column_mapping=self.column_mapping
+            column_mapping=self.column_mapping,
         )
 
         if output_path:
@@ -186,8 +179,8 @@ class FraudMonitor:
         self,
         current_data: pd.DataFrame,
         drift_threshold: float = 0.5,
-        feature_drift_threshold: float = 0.3
-    ) -> Dict[str, Any]:
+        feature_drift_threshold: float = 0.3,
+    ) -> dict[str, Any]:
         """
         Check if data drift exceeds thresholds.
 
@@ -210,7 +203,9 @@ class FraudMonitor:
 
         if drift_share > drift_threshold:
             alert = True
-            alerts.append(f"Dataset drift ({drift_share:.2%}) exceeds threshold ({drift_threshold:.2%})")
+            alerts.append(
+                f"Dataset drift ({drift_share:.2%}) exceeds threshold ({drift_threshold:.2%})"
+            )
 
         if len(drifted_features) > len(self.numerical_features) * feature_drift_threshold:
             alert = True
@@ -222,16 +217,16 @@ class FraudMonitor:
             "dataset_drift": dataset_drift,
             "drift_share": drift_share,
             "drifted_features": drifted_features,
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
         }
 
-    def _extract_drift_metrics(self, result: Dict) -> Dict[str, Any]:
+    def _extract_drift_metrics(self, result: dict) -> dict[str, Any]:
         """Extract key drift metrics from report result."""
         metrics = {
             "dataset_drift": False,
             "drift_share": 0.0,
             "drifted_features": [],
-            "total_features": 0
+            "total_features": 0,
         }
 
         try:
@@ -247,7 +242,8 @@ class FraudMonitor:
                     # Get drifted columns
                     drift_by_columns = result_data.get("drift_by_columns", {})
                     metrics["drifted_features"] = [
-                        col for col, data in drift_by_columns.items()
+                        col
+                        for col, data in drift_by_columns.items()
                         if data.get("drift_detected", False)
                     ]
         except Exception as e:
@@ -255,7 +251,7 @@ class FraudMonitor:
 
         return metrics
 
-    def _extract_performance_metrics(self, result: Dict) -> Dict[str, Any]:
+    def _extract_performance_metrics(self, result: dict) -> dict[str, Any]:
         """Extract key performance metrics from report result."""
         metrics = {}
 
@@ -266,12 +262,14 @@ class FraudMonitor:
 
                 if "ClassificationQualityMetric" in metric_id:
                     current = result_data.get("current", {})
-                    metrics.update({
-                        "accuracy": current.get("accuracy"),
-                        "precision": current.get("precision"),
-                        "recall": current.get("recall"),
-                        "f1": current.get("f1")
-                    })
+                    metrics.update(
+                        {
+                            "accuracy": current.get("accuracy"),
+                            "precision": current.get("precision"),
+                            "recall": current.get("recall"),
+                            "f1": current.get("f1"),
+                        }
+                    )
         except Exception as e:
             print(f"Error extracting performance metrics: {e}")
 
@@ -283,8 +281,8 @@ def create_monitoring_report(
     current_path: str,
     output_dir: str = "monitoring/evidently_reports",
     target_column: str = "isFraud",
-    prediction_column: str = "prediction"
-) -> Dict[str, Any]:
+    prediction_column: str = "prediction",
+) -> dict[str, Any]:
     """
     Create all monitoring reports.
 
@@ -310,20 +308,18 @@ def create_monitoring_report(
     monitor = FraudMonitor(
         reference_data=reference_data,
         target_column=target_column,
-        prediction_column=prediction_column
+        prediction_column=prediction_column,
     )
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # Generate reports
     _, drift_metrics = monitor.generate_data_drift_report(
-        current_data,
-        output_path=str(output_dir / f"data_drift_{timestamp}.html")
+        current_data, output_path=str(output_dir / f"data_drift_{timestamp}.html")
     )
 
     _, perf_metrics = monitor.generate_model_performance_report(
-        current_data,
-        output_path=str(output_dir / f"model_performance_{timestamp}.html")
+        current_data, output_path=str(output_dir / f"model_performance_{timestamp}.html")
     )
 
     # Check for alerts
@@ -334,7 +330,7 @@ def create_monitoring_report(
         "timestamp": timestamp,
         "drift": drift_metrics,
         "performance": perf_metrics,
-        "alerts": drift_check
+        "alerts": drift_check,
     }
 
     # Save metrics JSON
@@ -349,26 +345,28 @@ def create_monitoring_report(
 
 if __name__ == "__main__":
     # Example usage
-    import numpy as np
-
     # Create sample data
     np.random.seed(42)
     n_samples = 1000
 
-    reference = pd.DataFrame({
-        "feature1": np.random.normal(0, 1, n_samples),
-        "feature2": np.random.normal(5, 2, n_samples),
-        "isFraud": np.random.binomial(1, 0.035, n_samples),
-        "prediction": np.random.binomial(1, 0.04, n_samples)
-    })
+    reference = pd.DataFrame(
+        {
+            "feature1": np.random.normal(0, 1, n_samples),
+            "feature2": np.random.normal(5, 2, n_samples),
+            "isFraud": np.random.binomial(1, 0.035, n_samples),
+            "prediction": np.random.binomial(1, 0.04, n_samples),
+        }
+    )
 
     # Simulate drift in current data
-    current = pd.DataFrame({
-        "feature1": np.random.normal(0.5, 1.2, n_samples),  # Drift
-        "feature2": np.random.normal(5, 2, n_samples),
-        "isFraud": np.random.binomial(1, 0.05, n_samples),
-        "prediction": np.random.binomial(1, 0.06, n_samples)
-    })
+    current = pd.DataFrame(
+        {
+            "feature1": np.random.normal(0.5, 1.2, n_samples),  # Drift
+            "feature2": np.random.normal(5, 2, n_samples),
+            "isFraud": np.random.binomial(1, 0.05, n_samples),
+            "prediction": np.random.binomial(1, 0.06, n_samples),
+        }
+    )
 
     monitor = FraudMonitor(reference)
     drift_check = monitor.check_drift_threshold(current)

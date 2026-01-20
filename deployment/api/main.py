@@ -8,10 +8,9 @@ REST API for real-time fraud detection predictions.
 import os
 import sys
 import time
-from pathlib import Path
-from datetime import datetime
-from typing import List, Optional
 from contextlib import asynccontextmanager
+from datetime import datetime
+from pathlib import Path
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, status
@@ -22,14 +21,13 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from deployment.api.schemas import (
-    PredictionRequest,
     BatchPredictionRequest,
-    PredictionResponse,
     BatchPredictionResponse,
     HealthResponse,
     ModelInfoResponse,
-    ErrorResponse,
-    TransactionFeatures
+    PredictionRequest,
+    PredictionResponse,
+    TransactionFeatures,
 )
 
 # Global model instance
@@ -58,7 +56,7 @@ def load_model():
             "version": "1.1.0",
             "features_count": len(feature_names),
             "threshold": 0.44,
-            "last_updated": datetime.now()
+            "last_updated": datetime.now(),
         }
 
         print(f"Model loaded from {model_dir}")
@@ -68,15 +66,40 @@ def load_model():
         return False
 
 
-def get_default_features() -> List[str]:
+def get_default_features() -> list[str]:
     """Get default feature names."""
     # Top 30 features from SHAP analysis
     return [
-        "C14", "C12", "card6", "C1", "V308", "V258", "V317", "V282",
-        "C11", "V280", "card2", "TransactionDT", "TransactionAmt",
-        "P_emaildomain", "V95", "D15", "V283", "D1", "addr1", "card1",
-        "V285", "D4", "C13", "D10", "C2", "V310", "card5", "D11",
-        "dist1", "C6"
+        "C14",
+        "C12",
+        "card6",
+        "C1",
+        "V308",
+        "V258",
+        "V317",
+        "V282",
+        "C11",
+        "V280",
+        "card2",
+        "TransactionDT",
+        "TransactionAmt",
+        "P_emaildomain",
+        "V95",
+        "D15",
+        "V283",
+        "D1",
+        "addr1",
+        "card1",
+        "V285",
+        "D4",
+        "C13",
+        "D10",
+        "C2",
+        "V310",
+        "card5",
+        "D11",
+        "dist1",
+        "C6",
     ]
 
 
@@ -128,7 +151,7 @@ app = FastAPI(
     title="Fraud Detection API",
     description="Real-time credit card fraud detection using stacking ensemble",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # Add CORS middleware
@@ -144,11 +167,7 @@ app.add_middleware(
 @app.get("/", response_model=HealthResponse)
 async def root():
     """Root endpoint - health check."""
-    return HealthResponse(
-        status="healthy",
-        model_loaded=model is not None,
-        version="1.0.0"
-    )
+    return HealthResponse(status="healthy", model_loaded=model is not None, version="1.0.0")
 
 
 @app.get("/health", response_model=HealthResponse)
@@ -157,7 +176,7 @@ async def health_check():
     return HealthResponse(
         status="healthy" if model is not None else "degraded",
         model_loaded=model is not None,
-        version="1.0.0"
+        version="1.0.0",
     )
 
 
@@ -166,8 +185,7 @@ async def get_model_info():
     """Get model information."""
     if model is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Model not loaded"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded"
         )
 
     return ModelInfoResponse(
@@ -176,7 +194,7 @@ async def get_model_info():
         features_count=model_info.get("features_count", 0),
         threshold=model_info.get("threshold", 0.44),
         metrics={"auc_roc": 0.92, "accuracy": 0.98},  # Would load from registry
-        last_updated=model_info.get("last_updated")
+        last_updated=model_info.get("last_updated"),
     )
 
 
@@ -193,8 +211,7 @@ async def predict(request: PredictionRequest):
     """
     if model is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Model not loaded"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded"
         )
 
     try:
@@ -209,14 +226,11 @@ async def predict(request: PredictionRequest):
             is_fraud=bool(is_fraud),
             fraud_probability=float(proba),
             risk_level=get_risk_level(proba),
-            threshold_used=request.threshold
+            threshold_used=request.threshold,
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.post("/predict/batch", response_model=BatchPredictionResponse)
@@ -232,17 +246,14 @@ async def predict_batch(request: BatchPredictionRequest):
     """
     if model is None:
         raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Model not loaded"
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Model not loaded"
         )
 
     try:
         start_time = time.time()
 
         # Convert all transactions to array
-        X = np.vstack([
-            transaction_to_array(t) for t in request.transactions
-        ])
+        X = np.vstack([transaction_to_array(t) for t in request.transactions])
 
         # Get predictions
         probas = model.predict_proba(X)[:, 1]
@@ -250,12 +261,14 @@ async def predict_batch(request: BatchPredictionRequest):
 
         for proba in probas:
             is_fraud = proba >= request.threshold
-            predictions.append(PredictionResponse(
-                is_fraud=bool(is_fraud),
-                fraud_probability=float(proba),
-                risk_level=get_risk_level(proba),
-                threshold_used=request.threshold
-            ))
+            predictions.append(
+                PredictionResponse(
+                    is_fraud=bool(is_fraud),
+                    fraud_probability=float(proba),
+                    risk_level=get_risk_level(proba),
+                    threshold_used=request.threshold,
+                )
+            )
 
         processing_time = (time.time() - start_time) * 1000
         fraud_count = sum(1 for p in predictions if p.is_fraud)
@@ -265,14 +278,11 @@ async def predict_batch(request: BatchPredictionRequest):
             total_count=len(predictions),
             fraud_count=fraud_count,
             fraud_rate=fraud_count / len(predictions) if predictions else 0,
-            processing_time_ms=processing_time
+            processing_time_ms=processing_time,
         )
 
     except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
 @app.post("/model/reload")
@@ -283,11 +293,11 @@ async def reload_model():
         return {"status": "success", "message": "Model reloaded successfully"}
     else:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to reload model"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to reload model"
         )
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
