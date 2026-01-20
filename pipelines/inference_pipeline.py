@@ -47,7 +47,9 @@ def load_inference_data(data_path: str) -> pd.DataFrame:
 
 
 @task(name="preprocess_inference_data")
-def preprocess_inference_data(df: pd.DataFrame, feature_names: list[str]) -> np.ndarray:
+def preprocess_inference_data(
+    df: pd.DataFrame, feature_names: list[str]
+) -> np.ndarray:
     """Preprocess data for inference with encoding for categorical features."""
     logger = get_run_logger()
     from sklearn.preprocessing import LabelEncoder
@@ -107,7 +109,9 @@ def run_inference(
 
 
 @task(name="save_predictions")
-def save_predictions(df: pd.DataFrame, predictions: dict[str, np.ndarray], output_path: str) -> str:
+def save_predictions(
+    df: pd.DataFrame, predictions: dict[str, np.ndarray], output_path: str
+) -> str:
     """Save predictions to file."""
     logger = get_run_logger()
 
@@ -209,7 +213,9 @@ def inference_flow(
             logger.info(f"Loaded {len(feature_names)} feature names from {feature_file}")
         else:
             # Fallback: use all numeric columns (may cause shape mismatch)
-            logger.warning(f"Feature names file not found at {feature_file}, using all numeric columns")
+            logger.warning(
+                f"Feature names file not found at {feature_file}, using all numeric columns"
+            )
             feature_names = df.select_dtypes(include=[np.number]).columns.tolist()
 
     # Preprocess
