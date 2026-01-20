@@ -270,9 +270,28 @@ def training_flow(
 
 
 if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Fraud Detection Training Pipeline")
+    parser.add_argument(
+        "--config-path",
+        type=str,
+        default="config/params.yaml",
+        help="Path to config file (use config/params_codespaces.yaml for low-memory)",
+    )
+    parser.add_argument("--use-optuna", action="store_true", help="Enable Optuna tuning")
+    parser.add_argument(
+        "--no-feature-selection", action="store_true", help="Disable feature selection"
+    )
+    parser.add_argument("--register-model", action="store_true", help="Register model to MLflow")
+    args = parser.parse_args()
+
     # Run the training flow
     result = training_flow(
-        use_optuna=False, use_feature_selection=True, register_model=False  # Skip for quick test
+        config_path=args.config_path,
+        use_optuna=args.use_optuna,
+        use_feature_selection=not args.no_feature_selection,
+        register_model=args.register_model,
     )
 
     print("\nTraining Results:")
