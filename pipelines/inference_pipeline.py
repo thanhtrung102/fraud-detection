@@ -209,11 +209,14 @@ def inference_flow(
         if feature_file.exists():
             with open(feature_file) as f:
                 feature_names = json.load(f)
-            logger.info(f"Loaded {len(feature_names)} feature names from {feature_file}")
+            logger.info(
+                f"Loaded {len(feature_names)} feature names from {feature_file}"
+            )
         else:
             # Fallback: use all numeric columns (may cause shape mismatch)
             logger.warning(
-                f"Feature names file not found at {feature_file}, using all numeric columns"
+                f"Feature names file not found at {feature_file}, "
+                "using all numeric columns"
             )
             feature_names = df.select_dtypes(include=[np.number]).columns.tolist()
 
