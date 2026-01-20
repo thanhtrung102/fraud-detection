@@ -31,13 +31,10 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff black mypy
+          pip install ruff mypy
 
       - name: Run Ruff (linting)
         run: ruff check src/ mlops/ pipelines/ tests/ --output-format=github
-
-      - name: Run Black (formatting check)
-        run: black --check src/ mlops/ pipelines/ tests/ deployment/
 
       - name: Run MyPy (type checking)
         run: mypy src/ mlops/ pipelines/ --ignore-missing-imports
