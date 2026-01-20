@@ -44,49 +44,127 @@ pip install -r requirements.txt
 python -m src.main
 ```
 
-### Pipeline Options
+---
+
+## Running Options
+
+This project provides **two ways** to run the stacking ensemble model:
+
+### Option 1: Research Pipeline (`src.main`) - Match Paper Methodology
+
+Use this for **reproducing paper results** and research experiments.
 
 ```bash
-# Full pipeline (SHAP + Optuna) - Recommended for best results
+# Full paper methodology (SHAP + Optuna, 20 trials)
 python -m src.main
 
 # Skip Optuna tuning (faster, uses config defaults)
 python -m src.main --no-optuna
 
-# Skip SHAP feature selection (use all features)
+# Skip SHAP feature selection (use all 400+ features)
 python -m src.main --no-feature-selection
 
-# Quick run (skip both)
+# Quick run (skip both optimizations)
 python -m src.main --no-optuna --no-feature-selection
 ```
+
+### Option 2: MLOps Pipeline (`pipelines/training_pipeline.py`) - Production Ready
+
+Use this for **MLOps workflows** with MLflow tracking and Prefect orchestration.
+
+```bash
+# Basic run with default config
+python pipelines/training_pipeline.py
+
+# Low-memory mode (100K samples, ~3GB RAM)
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
+
+# Production mode (300K samples, ~16GB RAM)
+python pipelines/training_pipeline.py --config-path config/params_production.yaml
+
+# Enable Optuna hyperparameter tuning
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml --use-optuna
+
+# Register model to MLflow registry
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml --register-model
+
+# Skip SHAP feature selection
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml --no-feature-selection
+```
+
+#### MLOps Pipeline CLI Options
+
+| Flag | Description |
+|------|-------------|
+| `--config-path PATH` | Config file path (default: `config/params.yaml`) |
+| `--use-optuna` | Enable Optuna hyperparameter tuning (20 trials) |
+| `--no-feature-selection` | Disable SHAP feature selection |
+| `--register-model` | Register trained model to MLflow registry |
+
+### Comparison: Research vs MLOps Pipeline
+
+| Feature | `src.main` | `pipelines/training_pipeline.py` |
+|---------|-----------|----------------------------------|
+| MLflow tracking | No | Yes |
+| Prefect orchestration | No | Yes |
+| Model registry | No | Yes (optional) |
+| Paper methodology | Full match | Configurable |
+| Best for | Research, paper reproduction | Production, CI/CD |
+
+---
+
+## Configuration Profiles
 
 ### Production Mode (Replicate Paper Results)
 
 For machines with **4 cores, 16GB RAM, 32GB storage**:
 
 ```bash
-# Copy production config (300K samples, optimized for paper results)
-cp config/params_production.yaml config/params.yaml
-
-# Run full pipeline with Optuna tuning (20 trials)
+# Research pipeline - full paper methodology
 python -m src.main
+
+# Or MLOps pipeline with production config
+python pipelines/training_pipeline.py --config-path config/params_production.yaml --use-optuna
 ```
+
+| Setting | Production Config |
+|---------|------------------|
+| Sample size | 300,000 |
+| n_estimators | 400 |
+| max_depth | 8 |
+| Optuna trials | 20 |
+| CV folds | 5 |
+| Threshold | 0.44 |
 
 **Target Metrics:** 99% Accuracy, 0.99 AUC-ROC (as per [arXiv:2505.10050](https://arxiv.org/html/2505.10050v1))
 
-### GitHub Codespaces (8GB RAM)
+### GitHub Codespaces / Low Memory (8GB RAM)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/thanhtrung102/fraud-detection)
 
-For Codespaces (limited to 8GB RAM):
-
 ```bash
-# Copy Codespaces config (100K samples)
+# Research pipeline with codespaces config
 cp config/params_codespaces.yaml config/params.yaml
-
-# Run pipeline (skip Optuna for faster execution)
 python -m src.main --no-optuna
+
+# Or MLOps pipeline (recommended)
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
 ```
+
+| Setting | Codespaces Config |
+|---------|------------------|
+| Sample size | 100,000 |
+| n_estimators | 200 |
+| max_depth | 6 |
+| Memory usage | ~3GB |
+
+### Configuration Files
+
+| Config | Sample Size | RAM Required | Use Case |
+|--------|-------------|--------------|----------|
+| `params.yaml` | Full dataset | 16GB+ | Default |
+| `params_production.yaml` | 300,000 | 16GB | Paper reproduction |
+| `params_codespaces.yaml` | 100,000 | 8GB | Limited resources |
 
 ---
 
