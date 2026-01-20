@@ -25,18 +25,20 @@ def reduce_memory(df: pd.DataFrame) -> pd.DataFrame:
     """Reduce DataFrame memory by downcasting numeric types."""
     for col in df.columns:
         col_type = df[col].dtype
-        if col_type is not object:
-            c_min, c_max = df[col].min(), df[col].max()
-            if str(col_type)[:3] == "int":
-                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
-                    df[col] = df[col].astype(np.int8)
-                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
-                    df[col] = df[col].astype(np.int16)
-                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
-                    df[col] = df[col].astype(np.int32)
-            else:
-                if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
-                    df[col] = df[col].astype(np.float32)
+        # Only process numeric columns (skip object, string, category, etc.)
+        if not pd.api.types.is_numeric_dtype(col_type):
+            continue
+        c_min, c_max = df[col].min(), df[col].max()
+        if pd.api.types.is_integer_dtype(col_type):
+            if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                df[col] = df[col].astype(np.int8)
+            elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                df[col] = df[col].astype(np.int16)
+            elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                df[col] = df[col].astype(np.int32)
+        elif pd.api.types.is_float_dtype(col_type):
+            if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                df[col] = df[col].astype(np.float32)
     return df
 
 
