@@ -155,9 +155,8 @@ def generate_inference_report(
     import json
 
     Path(output_dir).mkdir(parents=True, exist_ok=True)
-    report_path = (
-        Path(output_dir) / f"inference_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-    )
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    report_path = Path(output_dir) / f"inference_report_{timestamp}.json"
 
     with open(report_path, "w") as f:
         json.dump(report, f, indent=2)
