@@ -6,6 +6,17 @@
 
 A fraud detection system using stacking ensemble methods combined with explainable AI techniques. Based on the paper ["Financial Fraud Detection Using Explainable AI and Stacking Ensemble Methods"](https://arxiv.org/html/2505.10050v1) (arXiv:2505.10050).
 
+> **Looking for MLOps & Production Deployment?**
+> Check out the [`mlops` branch](https://github.com/thanhtrung102/fraud-detection/tree/mlops) for:
+> - MLflow experiment tracking & model registry
+> - Prefect workflow orchestration
+> - FastAPI model serving
+> - Evidently monitoring & drift detection
+> - Docker & GCP Cloud Run deployment
+> - CI/CD with GitHub Actions
+>
+> See the [MLOps Documentation](https://github.com/thanhtrung102/fraud-detection/blob/mlops/docs/MLOPS.md) for details.
+
 ## Highlights
 
 - **Stacking Ensemble**: Combines XGBoost, LightGBM, and CatBoost with XGBoost meta-learner
@@ -26,6 +37,7 @@ A fraud detection system using stacking ensemble methods combined with explainab
 - [Results](#results)
 - [Explainability](#explainability)
 - [Project Structure](#project-structure)
+- [MLOps & Production](#mlops--production)
 - [Contributing](#contributing)
 
 ---
@@ -500,6 +512,40 @@ Default 0.5 threshold is suboptimal for imbalanced data. We optimize for F1-scor
 ```python
 best_threshold = 0.44  # Optimized via grid search
 ```
+
+---
+
+## MLOps & Production
+
+This branch (`main`) contains the core ML experiment code. For production deployment and MLOps features, switch to the [`mlops` branch](https://github.com/thanhtrung102/fraud-detection/tree/mlops).
+
+### MLOps Branch Features
+
+| Feature | Description |
+|---------|-------------|
+| **MLflow** | Experiment tracking, model registry |
+| **Prefect** | Workflow orchestration, scheduled pipelines |
+| **FastAPI** | REST API for model serving |
+| **Evidently** | Data drift detection, model monitoring |
+| **Docker** | Containerized deployment |
+| **GCP Cloud Run** | Serverless production deployment |
+| **Terraform** | Infrastructure as Code |
+| **GitHub Actions** | CI/CD pipelines |
+
+### Quick Start (MLOps)
+
+```bash
+# Switch to mlops branch
+git checkout mlops
+
+# Run training with MLflow tracking
+python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
+
+# Start API server
+uvicorn api.main:app --reload --port 8000
+```
+
+See [MLOps Documentation](https://github.com/thanhtrung102/fraud-detection/blob/mlops/docs/MLOPS.md) for complete setup guide.
 
 ---
 
