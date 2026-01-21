@@ -29,32 +29,3 @@ kaggle>=1.5.0
 tqdm>=4.64.0
 pyyaml>=6.0
 joblib>=1.1.0
-
-# Jupyter (optional)
-jupyter>=1.0.0
-ipykernel>=6.0.0
-
-# =============================================================================
-# MLOps Dependencies
-# =============================================================================
-
-# Experiment Tracking & Model Registry
-mlflow>=2.10.0
-
-# Workflow Orchestration
-prefect>=2.14.0
-
-# Model Monitoring
-evidently>=0.4.0
-
-# API Serving
-fastapi>=0.109.0
-uvicorn>=0.27.0
-pydantic>=2.5.0
-
-# GCP Integration
-google-cloud-storage>=2.14.0
-google-cloud-bigquery>=3.17.0
-
-# Database
-psycopg2-binary>=2.9.9
