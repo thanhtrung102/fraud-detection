@@ -109,7 +109,7 @@ mlflow ui --backend-store-uri sqlite:///mlflow.db
 ### Start API Server
 
 ```bash
-uvicorn api.main:app --reload --port 8000
+uvicorn deployment.api.main:app --reload --port 8000
 # Open http://localhost:8000/docs
 ```
 
@@ -288,7 +288,7 @@ python pipelines/inference_pipeline.py
 python pipelines/monitoring_pipeline.py
 
 # 7. Start API server
-uvicorn api.main:app --reload --port 8000
+uvicorn deployment.api.main:app --reload --port 8000
 
 # 8. Test API
 curl http://localhost:8000/health

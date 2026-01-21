@@ -123,7 +123,7 @@ python -m src.main
 ### 4. Start API Server
 
 ```bash
-uvicorn api.main:app --reload --port 8000
+uvicorn deployment.api.main:app --reload --port 8000
 # Open http://localhost:8000/docs
 ```
 
@@ -237,7 +237,7 @@ python pipelines/inference_pipeline.py
 python pipelines/monitoring_pipeline.py
 
 # 5. Start API server
-uvicorn api.main:app --reload --port 8000
+uvicorn deployment.api.main:app --reload --port 8000
 
 # 6. Test prediction
 curl http://localhost:8000/health
