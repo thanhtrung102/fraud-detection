@@ -386,7 +386,9 @@ plot_partial_dependence(model, X_test, feature_names,
 fraud-detection/
 ├── README.md                  # Project documentation
 ├── requirements.txt           # Python dependencies
+├── LICENSE                    # MIT License
 ├── .gitignore
+├── .gitattributes
 │
 ├── config/
 │   ├── params.yaml            # Default configuration
@@ -396,6 +398,7 @@ fraud-detection/
 ├── data/                      # Dataset (download from Kaggle)
 │   ├── train_transaction.csv
 │   ├── train_identity.csv
+│   ├── top_30_features.txt    # SHAP-selected feature list
 │   └── ...
 │
 ├── src/
@@ -408,21 +411,15 @@ fraud-detection/
 │   ├── evaluation.py          # Metrics & visualization
 │   └── explainability.py      # SHAP, LIME, PDP analysis
 │
-├── notebooks/
-│   └── exploration.ipynb      # Data exploration notebook
+├── results/                   # Generated outputs
+│   ├── metrics.json           # Evaluation metrics
+│   ├── evaluation_plots.png   # ROC curve, confusion matrix
+│   ├── feature_importance.csv # SHAP feature importance
+│   ├── shap_summary.png       # SHAP summary plot
+│   └── shap_bar.png           # SHAP bar plot
 │
-├── results/
-│   ├── metrics.json
-│   ├── confusion_matrix.png
-│   ├── roc_curve.png
-│   ├── shap_summary.png
-│   └── lime_explanation.html
-│
-├── models/                    # Saved model files
-│   ├── xgb_model.joblib
-│   ├── lgbm_model.joblib
-│   ├── catboost_model.joblib
-│   └── meta_learner.joblib
+├── models/                    # Created at runtime
+│   └── (saved model files)
 │
 └── .devcontainer/
     └── devcontainer.json      # GitHub Codespaces configuration
@@ -542,7 +539,7 @@ git checkout mlops
 python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
 
 # Start API server
-uvicorn api.main:app --reload --port 8000
+uvicorn deployment.api.main:app --reload --port 8000
 ```
 
 See [MLOps Documentation](https://github.com/thanhtrung102/fraud-detection/blob/mlops/docs/MLOPS.md) for complete setup guide.
