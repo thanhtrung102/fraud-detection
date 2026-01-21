@@ -7,7 +7,7 @@
 A fraud detection system using stacking ensemble methods combined with explainable AI techniques. Based on the paper ["Financial Fraud Detection Using Explainable AI and Stacking Ensemble Methods"](https://arxiv.org/html/2505.10050v1) (arXiv:2505.10050).
 
 > **Looking for MLOps & Production Deployment?**
-> Check out the [`mlops` branch](https://github.com/thanhtrung102/fraud-detection/tree/mlops) for:
+> Check out the [`mlops`] branch (https://github.com/thanhtrung102/fraud-detection/tree/mlops) for:
 > - MLflow experiment tracking & model registry
 > - Prefect workflow orchestration
 > - FastAPI model serving
