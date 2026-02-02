@@ -3,14 +3,28 @@ MLflow Experiment Tracking
 ==========================
 
 Experiment tracking and logging utilities using MLflow.
+Supports S3/MinIO artifact storage for production deployments.
 """
 
+import logging
 import os
 from typing import Any, Optional
 
 import mlflow
 import numpy as np
 from mlflow.tracking import MlflowClient
+
+logger = logging.getLogger(__name__)
+
+
+def setup_s3_credentials() -> None:
+    """Set up S3/MinIO credentials from environment."""
+    s3_endpoint = os.getenv("MLFLOW_S3_ENDPOINT_URL")
+    if s3_endpoint:
+        os.environ.setdefault("AWS_ACCESS_KEY_ID", "minioadmin")
+        os.environ.setdefault("AWS_SECRET_ACCESS_KEY", "minioadmin")
+        os.environ.setdefault("AWS_DEFAULT_REGION", "us-east-1")
+        logger.info(f"S3 endpoint configured: {s3_endpoint}")
 
 
 def setup_mlflow(
@@ -26,6 +40,9 @@ def setup_mlflow(
     Returns:
         Experiment ID
     """
+    # Set up S3 credentials if using MinIO
+    setup_s3_credentials()
+
     mlflow.set_tracking_uri(tracking_uri)
 
     # Create or get experiment
@@ -260,8 +277,55 @@ def compare_runs(
     return comparisons
 
 
+def sync_artifacts_to_s3(run_id: str, local_artifacts_dir: str) -> bool:
+    """
+    Sync local artifacts to S3 after a training run.
+
+    Args:
+        run_id: MLflow run ID
+        local_artifacts_dir: Local directory containing artifacts
+
+    Returns:
+        True if sync successful
+    """
+    try:
+        from mlops.s3_utils import S3ArtifactManager
+
+        manager = S3ArtifactManager()
+        count = manager.sync_mlflow_artifacts_to_s3(run_id, local_artifacts_dir)
+        logger.info(f"Synced {count} artifacts to S3 for run {run_id}")
+        return True
+    except ImportError:
+        logger.warning("S3 utilities not available, skipping S3 sync")
+        return False
+    except Exception as e:
+        logger.error(f"Failed to sync artifacts to S3: {e}")
+        return False
+
+
+def verify_s3_artifacts(run_id: str, expected_artifacts: list[str]) -> dict[str, Any]:
+    """
+    Verify that expected artifacts exist in S3.
+
+    Args:
+        run_id: MLflow run ID
+        expected_artifacts: List of expected artifact paths
+
+    Returns:
+        Verification results
+    """
+    try:
+        from mlops.s3_utils import verify_s3_artifacts as _verify
+
+        return _verify(run_id, expected_artifacts)
+    except ImportError:
+        logger.warning("S3 utilities not available")
+        return {"success": False, "error": "S3 utilities not available"}
+
+
 if __name__ == "__main__":
     # Test MLflow setup
+    logging.basicConfig(level=logging.INFO)
     setup_mlflow()
 
     with mlflow.start_run(run_name="test-run"):

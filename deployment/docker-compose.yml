@@ -1,28 +1,56 @@
 version: '3.8'
 
 services:
-  # MLflow Tracking Server
-  mlflow:
-    image: ghcr.io/mlflow/mlflow:v2.10.0
-    container_name: fraud-mlflow
-    ports:
-      - "5000:5000"
+  # ==========================================================================
+  # Storage Services
+  # ==========================================================================
+
+  # MinIO for S3-compatible artifact storage
+  minio:
+    image: minio/minio:latest
+    container_name: fraud-minio
+    command: server /data --console-address ":9001"
     environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
-      - MLFLOW_ARTIFACT_ROOT=/mlflow/artifacts
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
     volumes:
-      - mlflow-artifacts:/mlflow/artifacts
-    command: >
-      mlflow server
-      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
-      --default-artifact-root /mlflow/artifacts
-      --host 0.0.0.0
-      --port 5000
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
     networks:
       - fraud-network
+    profiles:
+      - mlflow
+      - full
+    restart: unless-stopped
+
+  # MinIO bucket initialization
+  minio-mc:
+    image: minio/mc:latest
+    container_name: fraud-minio-mc
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      sleep 5;
+      mc alias set myminio http://minio:9000 minioadmin minioadmin;
+      mc mb myminio/mlflow-artifacts || true;
+      mc anonymous set public myminio/mlflow-artifacts;
+      echo 'MinIO bucket mlflow-artifacts created successfully';
+      exit 0;
+      "
+    networks:
+      - fraud-network
+    profiles:
+      - mlflow
+      - full
 
   # PostgreSQL for MLflow
   postgres:
@@ -41,22 +69,10 @@ services:
       retries: 5
     networks:
       - fraud-network
-
-  # Prefect Server
-  prefect:
-    image: prefecthq/prefect:2-python3.11
-    container_name: fraud-prefect
-    ports:
-      - "4200:4200"
-    environment:
-      - PREFECT_SERVER_API_HOST=0.0.0.0
-      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://prefect:prefect@postgres-prefect:5432/prefect
-    command: prefect server start
-    depends_on:
-      postgres-prefect:
-        condition: service_healthy
-    networks:
-      - fraud-network
+    profiles:
+      - mlflow
+      - full
+    restart: unless-stopped
 
   # PostgreSQL for Prefect
   postgres-prefect:
@@ -75,6 +91,69 @@ services:
       retries: 5
     networks:
       - fraud-network
+    profiles:
+      - prefect
+      - full
+    restart: unless-stopped
+
+  # ==========================================================================
+  # MLOps Services
+  # ==========================================================================
+
+  # MLflow Tracking Server with S3 Backend
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:v2.10.0
+    container_name: fraud-mlflow
+    ports:
+      - "5000:5000"
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://mlflow:mlflow@postgres:5432/mlflow
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - AWS_DEFAULT_REGION=us-east-1
+    command: >
+      mlflow server
+      --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
+      --default-artifact-root s3://mlflow-artifacts/
+      --serve-artifacts
+      --host 0.0.0.0
+      --port 5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - fraud-network
+    profiles:
+      - mlflow
+      - full
+    restart: unless-stopped
+
+  # Prefect Server
+  prefect:
+    image: prefecthq/prefect:2-python3.11
+    container_name: fraud-prefect
+    ports:
+      - "4200:4200"
+    environment:
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_API_DATABASE_CONNECTION_URL=postgresql+asyncpg://prefect:prefect@postgres-prefect:5432/prefect
+    command: prefect server start
+    depends_on:
+      postgres-prefect:
+        condition: service_healthy
+    networks:
+      - fraud-network
+    profiles:
+      - prefect
+      - full
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Application Services
+  # ==========================================================================
 
   # Fraud Detection API
   api:
@@ -87,6 +166,9 @@ services:
     environment:
       - MODEL_DIR=/app/models
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
     volumes:
       - ../models:/app/models:ro
       - ../config:/app/config:ro
@@ -99,6 +181,40 @@ services:
       - mlflow
     networks:
       - fraud-network
+    profiles:
+      - api
+      - full
+    restart: unless-stopped
+
+  # Streamlit UI for Interactive Fraud Analysis
+  streamlit-ui:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile.ui
+    container_name: fraud-streamlit
+    ports:
+      - "8501:8501"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
+      - MODEL_DIR=/app/models
+    volumes:
+      - ../models:/app/models:ro
+      - ../config:/app/config:ro
+    depends_on:
+      - mlflow
+    networks:
+      - fraud-network
+    profiles:
+      - ui
+      - full
+    restart: unless-stopped
+
+  # ==========================================================================
+  # Batch Processing Services
+  # ==========================================================================
 
   # Training Worker
   training:
@@ -108,6 +224,9 @@ services:
     container_name: fraud-training
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
       - PREFECT_API_URL=http://prefect:4200/api
     volumes:
       - ../data:/app/data
@@ -120,7 +239,7 @@ services:
     networks:
       - fraud-network
     profiles:
-      - training  # Only start with --profile training
+      - training
 
   # Monitoring Dashboard (Evidently)
   monitoring:
@@ -132,6 +251,9 @@ services:
       python -m pipelines.monitoring_pipeline
     environment:
       - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - AWS_ACCESS_KEY_ID=minioadmin
+      - AWS_SECRET_ACCESS_KEY=minioadmin
     volumes:
       - ../data:/app/data
       - ../monitoring:/app/monitoring
@@ -140,10 +262,10 @@ services:
     networks:
       - fraud-network
     profiles:
-      - monitoring  # Only start with --profile monitoring
+      - monitoring
 
 volumes:
-  mlflow-artifacts:
+  minio-data:
   postgres-data:
   postgres-prefect-data:
 

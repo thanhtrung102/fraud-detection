@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Model Report</title>
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-bg: #f8f9fa;
+            --card-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        header .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .meta-info {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+            font-size: 0.9rem;
+        }
+
+        .section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: var(--card-shadow);
+        }
+
+        .section h2 {
+            color: var(--primary-color);
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 25px;
+        }
+
+        .image-card {
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+        }
+
+        .image-card h3 {
+            padding: 15px 20px;
+            background: #f8f9fa;
+            font-size: 1rem;
+            color: #555;
+            border-bottom: 1px solid #eee;
+        }
+
+        .image-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .summary-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .summary-table th {
+            background: #f8f9fa;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .summary-table tr:hover {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #d4edda;
+            color: var(--success-color);
+        }
+
+        .badge-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .badge-danger {
+            background: #f8d7da;
+            color: var(--danger-color);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            header h1 {
+                font-size: 1.8rem;
+            }
+
+            .meta-info {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .image-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Fraud Detection Model Report</h1>
+        <p class="subtitle">Stacking Ensemble Performance Analysis</p>
+        <div class="meta-info">
+            <span>Generated: {{ timestamp }}</span>
+            <span>Model Version: {{ model_version }}</span>
+            <span>Dataset: {{ dataset_info }}</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Performance Metrics Section -->
+        <div class="section">
+            <h2>Performance Metrics</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ accuracy }}</div>
+                    <div class="metric-label">Accuracy</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ auc_roc }}</div>
+                    <div class="metric-label">AUC-ROC</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ precision }}</div>
+                    <div class="metric-label">Precision</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ recall }}</div>
+                    <div class="metric-label">Recall</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ f1_score }}</div>
+                    <div class="metric-label">F1 Score</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-value">{{ threshold }}</div>
+                    <div class="metric-label">Threshold</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Confusion Matrix Section -->
+        <div class="section">
+            <h2>Confusion Matrix</h2>
+            <div class="image-card">
+                <img src="{{ confusion_matrix_img }}" alt="Confusion Matrix">
+            </div>
+        </div>
+
+        <!-- ROC and PR Curves Section -->
+        <div class="section">
+            <h2>Performance Curves</h2>
+            <div class="image-grid">
+                <div class="image-card">
+                    <h3>ROC Curve</h3>
+                    <img src="{{ roc_curve_img }}" alt="ROC Curve">
+                </div>
+                <div class="image-card">
+                    <h3>Precision-Recall Curve</h3>
+                    <img src="{{ pr_curve_img }}" alt="Precision-Recall Curve">
+                </div>
+            </div>
+        </div>
+
+        <!-- Probability Distribution Section -->
+        <div class="section">
+            <h2>Probability Distribution</h2>
+            <div class="image-card">
+                <img src="{{ probability_dist_img }}" alt="Probability Distribution">
+            </div>
+        </div>
+
+        <!-- Feature Importance Section -->
+        <div class="section">
+            <h2>Feature Importance</h2>
+            <div class="image-card">
+                <img src="{{ feature_importance_img }}" alt="Feature Importance">
+            </div>
+        </div>
+
+        <!-- Model Summary Section -->
+        <div class="section">
+            <h2>Model Summary</h2>
+            <table class="summary-table">
+                <tr>
+                    <th>Property</th>
+                    <th>Value</th>
+                </tr>
+                <tr>
+                    <td>Model Type</td>
+                    <td>Stacking Ensemble (XGBoost + LightGBM + CatBoost)</td>
+                </tr>
+                <tr>
+                    <td>Meta-Learner</td>
+                    <td>XGBoost</td>
+                </tr>
+                <tr>
+                    <td>Number of Features</td>
+                    <td>{{ n_features }}</td>
+                </tr>
+                <tr>
+                    <td>Training Samples</td>
+                    <td>{{ n_train_samples }}</td>
+                </tr>
+                <tr>
+                    <td>Test Samples</td>
+                    <td>{{ n_test_samples }}</td>
+                </tr>
+                <tr>
+                    <td>Optimal Threshold</td>
+                    <td>{{ threshold }}</td>
+                </tr>
+                <tr>
+                    <td>MLflow Run ID</td>
+                    <td>{{ run_id }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <footer>
+        <p>Fraud Detection MLOps Platform | Generated with ModelVisualizer</p>
+    </footer>
+</body>
+</html>

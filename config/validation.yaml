@@ -1,0 +1,79 @@
+# Data Validation Configuration
+# ==============================
+# Configuration for fraud detection data validation
+
+validation:
+  # Required columns that must be present in the data
+  required_columns:
+    - TransactionDT
+    - TransactionAmt
+    - card1
+    - C1
+    - C14
+
+  # Expected data types for columns
+  # Columns will be automatically converted if possible
+  data_types:
+    TransactionAmt: float64
+    TransactionDT: int64
+    card1: int64
+    card2: float64
+    card5: int64
+    C1: float64
+    C2: float64
+    C6: float64
+    C11: float64
+    C12: float64
+    C13: float64
+    C14: float64
+    D1: float64
+    D4: float64
+    D10: float64
+    D11: float64
+    D15: float64
+    addr1: float64
+    dist1: float64
+
+  # Valid value ranges for numeric columns
+  value_ranges:
+    TransactionAmt:
+      min: 0.01
+      max: 999999.99
+    card1:
+      min: 1000
+      max: 20000
+    card2:
+      min: 100
+      max: 600
+    card5:
+      min: 100
+      max: 300
+    addr1:
+      min: 0
+      max: 600
+
+  # Validation thresholds
+  thresholds:
+    # Maximum percentage of missing values allowed per column
+    max_missing_pct: 30
+    # Maximum percentage of duplicate rows allowed
+    max_duplicate_pct: 1
+    # Z-score threshold for outlier detection
+    outlier_zscore_threshold: 3
+    # IQR multiplier for outlier detection
+    outlier_iqr_multiplier: 1.5
+
+  # Categorical columns and their valid values (optional)
+  categorical_constraints:
+    card6:
+      valid_values: ["credit", "debit", "charge", "debit or credit"]
+    ProductCD:
+      valid_values: ["W", "H", "C", "S", "R"]
+
+# Target column configuration
+target:
+  column: isFraud
+  positive_class: 1
+  expected_fraud_rate:
+    min: 0.01
+    max: 0.10

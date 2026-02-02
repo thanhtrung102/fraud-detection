@@ -32,9 +32,15 @@ help:
 	@echo "  make prefect-ui     Start Prefect UI"
 	@echo ""
 	@echo "Docker:"
-	@echo "  make docker-build   Build Docker images"
-	@echo "  make docker-up      Start all services"
+	@echo "  make docker-build   Build all Docker images"
+	@echo "  make docker-full    Start ALL services (MLflow, API, UI, MinIO)"
+	@echo "  make docker-serve   Start API + UI only"
+	@echo "  make docker-mlops   Start MLOps stack (MLflow, MinIO, PostgreSQL)"
+	@echo "  make docker-ui      Start Streamlit UI only"
+	@echo "  make docker-up      Start all services (alias for docker-full)"
 	@echo "  make docker-down    Stop all services"
+	@echo "  make docker-train   Run training in Docker"
+	@echo "  make docker-monitor Run monitoring in Docker"
 	@echo ""
 	@echo "Infrastructure:"
 	@echo "  make terraform-init   Initialize Terraform"
@@ -119,6 +125,9 @@ monitoring:
 serve:
 	uvicorn deployment.api.main:app --reload --host 0.0.0.0 --port 8000
 
+serve-ui:
+	streamlit run ui/fraud_app.py --server.port 8501 --server.address 0.0.0.0
+
 mlflow-ui:
 	mlflow ui --host 0.0.0.0 --port 5000
 
@@ -132,20 +141,57 @@ prefect-ui:
 docker-build:
 	docker build -t fraud-detection-api:latest -f deployment/Dockerfile .
 	docker build -t fraud-detection-training:latest -f deployment/Dockerfile.training .
+	docker build -t fraud-detection-ui:latest -f deployment/Dockerfile.ui .
 
+# Start all services (MLflow, Prefect, API, UI, MinIO)
+docker-full:
+	docker-compose -f deployment/docker-compose.yml --profile full up -d
+
+# Start API + UI only (requires MLflow to be running)
+docker-serve:
+	docker-compose -f deployment/docker-compose.yml --profile api --profile ui up -d
+
+# Start MLOps stack (MLflow + MinIO + PostgreSQL)
+docker-mlops:
+	docker-compose -f deployment/docker-compose.yml --profile mlflow up -d
+
+# Start Prefect orchestration
+docker-prefect:
+	docker-compose -f deployment/docker-compose.yml --profile prefect up -d
+
+# Start Streamlit UI only
+docker-ui:
+	docker-compose -f deployment/docker-compose.yml --profile ui up -d
+
+# Legacy: Start with old behavior (no profiles)
 docker-up:
-	docker-compose -f deployment/docker-compose.yml up -d
+	docker-compose -f deployment/docker-compose.yml --profile full up -d
 
 docker-down:
-	docker-compose -f deployment/docker-compose.yml down
+	docker-compose -f deployment/docker-compose.yml --profile full down
+	docker-compose -f deployment/docker-compose.yml down --remove-orphans
 
 docker-logs:
 	docker-compose -f deployment/docker-compose.yml logs -f
+
+docker-logs-mlflow:
+	docker-compose -f deployment/docker-compose.yml logs -f mlflow
+
+docker-logs-ui:
+	docker-compose -f deployment/docker-compose.yml logs -f streamlit-ui
 
 docker-push:
 	@echo "Push to your container registry:"
 	@echo "  docker tag fraud-detection-api:latest <registry>/fraud-detection-api:latest"
 	@echo "  docker push <registry>/fraud-detection-api:latest"
+
+# Run training in Docker
+docker-train:
+	docker-compose -f deployment/docker-compose.yml --profile training up
+
+# Run monitoring in Docker
+docker-monitor:
+	docker-compose -f deployment/docker-compose.yml --profile monitoring up
 
 # =============================================================================
 # Infrastructure (Terraform)
