@@ -8,14 +8,17 @@ Complete guide for MLOps components including experiment tracking, workflow orch
 
 - [Architecture Overview](#architecture-overview)
 - [Quick Start](#quick-start)
+- [Storage Layer](#storage-layer)
 - [Training Pipeline](#training-pipeline)
 - [Inference Pipeline](#inference-pipeline)
 - [Monitoring Pipeline](#monitoring-pipeline)
+- [Streamlit UI](#streamlit-ui)
+- [Data Validation](#data-validation)
+- [Visualization Suite](#visualization-suite)
 - [Local Development](#local-development)
 - [Production Deployment](#production-deployment)
 - [CI/CD Pipeline](#cicd-pipeline)
 - [Infrastructure as Code](#infrastructure-as-code)
-- [API Reference](#api-reference)
 - [Troubleshooting](#troubleshooting)
 
 ---
@@ -35,6 +38,14 @@ Complete guide for MLOps components including experiment tracking, workflow orch
 |                               |                    |                         |
 |                               v                    v                         |
 |   +---------------------------------------------------------------+         |
+|   |                        Storage Layer                          |         |
+|   |  +-------------+  +-------------+  +-------------+            |         |
+|   |  | PostgreSQL  |  |    MinIO    |  |   Models    |            |         |
+|   |  | (Metadata)  |  | (Artifacts) |  |   (Local)   |            |         |
+|   |  +-------------+  +-------------+  +-------------+            |         |
+|   +---------------------------------------------------------------+         |
+|                               |                                             |
+|   +---------------------------------------------------------------+         |
 |   |                        Pipelines                               |         |
 |   |  +----------+  +----------+  +--------------+                  |         |
 |   |  | Training |  | Inference|  |  Monitoring  |                  |         |
@@ -43,12 +54,11 @@ Complete guide for MLOps components including experiment tracking, workflow orch
 |   +-------|-------------|---------------|---------------------------+         |
 |           |             |               |                                    |
 |           v             v               v                                    |
-|   +-------------+  +-------------+  +-------------+                          |
-|   |   Model     |  |   FastAPI   |  |  Evidently  |                          |
-|   |  Registry   |--|   Server    |  |   Reports   |                          |
-|   +-------------+  +------+------+  +-------------+                          |
+|   +-------------+  +-------------+  +-------------+  +-------------+        |
+|   | Streamlit   |  |   FastAPI   |  |  Evidently  |  |Visualization|        |
+|   |     UI      |  |   Server    |  |   Reports   |  |    Suite    |        |
+|   +-------------+  +------+------+  +-------------+  +-------------+        |
 |                           |                                                  |
-|                           v                                                  |
 |   +---------------------------------------------------------------+         |
 |   |                      Deployment                                |         |
 |   |  +-------------+  +-------------+  +-------------+             |         |
@@ -65,9 +75,14 @@ Complete guide for MLOps components including experiment tracking, workflow orch
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | Experiment Tracking | MLflow | Log metrics, parameters, artifacts |
+| Artifact Storage | MinIO (S3-compatible) | Store models, charts, reports |
+| Metadata Store | PostgreSQL | MLflow backend database |
 | Workflow Orchestration | Prefect | Pipeline orchestration and scheduling |
 | Model Serving | FastAPI | REST API for predictions |
+| Interactive UI | Streamlit | Web interface for fraud analysis |
 | Monitoring | Evidently | Data drift and model performance |
+| Data Validation | Custom DataValidator | Schema, quality, range validation |
+| Visualization | ModelVisualizer | Performance charts and HTML reports |
 | Containerization | Docker | Packaging and deployment |
 | CI/CD | GitHub Actions | Automated testing and deployment |
 | Infrastructure | Terraform | GCP resource provisioning |
@@ -80,37 +95,100 @@ Complete guide for MLOps components including experiment tracking, workflow orch
 ### Prerequisites
 
 - Python 3.8+
-- Docker (optional, for containerized deployment)
-- GCP account (optional, for cloud deployment)
+- Docker & Docker Compose
+- 8GB+ RAM (16GB recommended)
 
-### Install Dependencies
+### Option 1: Docker Full Stack (Recommended)
 
 ```bash
-pip install -r requirements.txt
+# Clone repository
+git clone https://github.com/thanhtrung102/fraud-detection.git
+cd fraud-detection
+
+# Start all services (MLflow, MinIO, API, Streamlit UI)
+make docker-full
+
+# Access the services:
+# - Streamlit UI: http://localhost:8501
+# - FastAPI Docs: http://localhost:8000/docs
+# - MLflow UI: http://localhost:5000
+# - MinIO Console: http://localhost:9001 (minioadmin/minioadmin)
 ```
 
-### Run Training Pipeline
+### Option 2: Local Development
 
 ```bash
-# Low memory mode (8GB RAM)
+# Install dependencies
+pip install -r requirements.txt
+
+# Download dataset from Kaggle
+kaggle competitions download -c ieee-fraud-detection
+unzip ieee-fraud-detection.zip -d data/
+
+# Run training
 python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
 
-# Production mode (16GB+ RAM)
-python pipelines/training_pipeline.py --config-path config/params_production.yaml --use-optuna
+# Start services
+make serve      # FastAPI on port 8000
+make serve-ui   # Streamlit on port 8501
 ```
 
-### View MLflow Results
+---
 
-```bash
-mlflow ui --backend-store-uri sqlite:///mlflow.db
-# Open http://localhost:5000
+## Storage Layer
+
+### MinIO S3-Compatible Storage
+
+MinIO provides S3-compatible object storage for MLflow artifacts, including models, visualizations, and reports.
+
+#### Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MLFLOW_S3_ENDPOINT_URL` | `http://minio:9000` | MinIO endpoint |
+| `AWS_ACCESS_KEY_ID` | `minioadmin` | MinIO access key |
+| `AWS_SECRET_ACCESS_KEY` | `minioadmin` | MinIO secret key |
+
+#### S3 Utilities (`mlops/s3_utils.py`)
+
+```python
+from mlops.s3_utils import S3ArtifactManager
+
+# Initialize manager
+manager = S3ArtifactManager()
+
+# Upload artifact
+manager.upload_artifact(
+    local_path="results/confusion_matrix.png",
+    s3_key="experiments/run_123/confusion_matrix.png"
+)
+
+# List artifacts for a run
+artifacts = manager.list_artifacts(prefix="experiments/run_123/")
+
+# Sync all MLflow artifacts to S3
+from mlops.s3_utils import sync_mlflow_artifacts_to_s3
+sync_mlflow_artifacts_to_s3(run_id="abc123")
 ```
 
-### Start API Server
+#### Accessing MinIO Console
 
 ```bash
-uvicorn deployment.api.main:app --reload --port 8000
-# Open http://localhost:8000/docs
+# Start MinIO
+make docker-mlops
+
+# Access console
+open http://localhost:9001
+# Login: minioadmin / minioadmin
+```
+
+### PostgreSQL Backend
+
+MLflow uses PostgreSQL for metadata storage instead of SQLite:
+
+```yaml
+# Connection string
+postgresql://mlflow:mlflow@postgres:5432/mlflow
 ```
 
 ---
@@ -144,29 +222,6 @@ uvicorn deployment.api.main:app --reload --port 8000
 | Default | `config/params.yaml` | 590,540 | 16GB+ | Full dataset |
 | Production | `config/params_production.yaml` | 300,000 | 16GB | Paper methodology |
 | Codespaces | `config/params_codespaces.yaml` | 100,000 | 8GB | Limited resources |
-
-### Paper Methodology vs Default Pipeline
-
-| Aspect | Paper (arXiv:2505.10050) | MLOps Default |
-|--------|-------------------------|---------------|
-| Optuna tuning | 20 trials per model | Disabled |
-| SHAP selection | 30 features | Enabled |
-| n_estimators | 400 | 200 (codespaces), 400 (production) |
-| max_depth | 8 | 6 (codespaces), 8 (production) |
-| Threshold | 0.44 | F1-optimized |
-
-### Full Paper Reproduction
-
-```bash
-# Option 1: Research pipeline
-python -m src.main
-
-# Option 2: MLOps pipeline with production config
-python pipelines/training_pipeline.py \
-  --config-path config/params_production.yaml \
-  --use-optuna \
-  --register-model
-```
 
 ### Expected Results
 
@@ -260,6 +315,160 @@ if drift_result["alert"]:
 
 ---
 
+## Streamlit UI
+
+The interactive Streamlit UI provides a user-friendly interface for fraud detection.
+
+### Features
+
+- **Model Loading**: Auto-discover models from MLflow or load from local storage
+- **Multiple Input Methods**:
+  - CSV file upload with validation
+  - Manual transaction entry
+  - Sample data generation for testing
+- **Real-time Predictions**: Single and batch fraud detection
+- **Visualizations**: Risk distribution, probability histograms
+- **Export**: Download predictions as CSV
+
+### Starting the UI
+
+```bash
+# With Docker
+make docker-ui
+
+# Locally
+make serve-ui
+# Open http://localhost:8501
+```
+
+### Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MLFLOW_TRACKING_URI` | `http://mlflow:5000` | MLflow server URL |
+| `MODEL_DIR` | `/app/models` | Local model directory |
+| `DEFAULT_THRESHOLD` | `0.5` | Default classification threshold |
+
+### Model Loading Priority
+
+1. **Production Model**: MLflow registry production stage
+2. **Latest Run**: Most recent MLflow experiment run
+3. **Local Directory**: `models/` folder with joblib files
+
+---
+
+## Data Validation
+
+Comprehensive data validation via `src/validation.py`.
+
+### Validation Layers
+
+1. **Schema Validation**: Required columns and data types
+2. **Data Quality**: Missing values, duplicates, outliers
+3. **Value Ranges**: Min/max constraints for numeric columns
+4. **Distribution Shift**: Detect drift between training and inference data
+
+### Configuration (`config/validation.yaml`)
+
+```yaml
+validation:
+  required_columns:
+    - TransactionDT
+    - TransactionAmt
+    - card1
+    - C1
+    - C14
+
+  value_ranges:
+    TransactionAmt:
+      min: 0.01
+      max: 999999.99
+    card1:
+      min: 1000
+      max: 20000
+
+  thresholds:
+    max_missing_pct: 30
+    max_duplicate_pct: 1
+    outlier_zscore_threshold: 3
+```
+
+### Usage
+
+```python
+from src.validation import DataValidator
+
+# Initialize validator
+validator = DataValidator("config/validation.yaml")
+
+# Validate training data
+is_valid, report = validator.validate_for_training(df)
+
+if not is_valid:
+    print(f"Validation failed with {report['total_issues']} issues")
+    print(f"Schema errors: {report['schema_validation']['errors']}")
+    print(f"Range errors: {report['value_ranges']['errors']}")
+
+# Validate inference data with drift detection
+is_valid, report = validator.validate_for_inference(df, training_stats)
+
+if report.get("distribution_shift", {}).get("drift_detected"):
+    print("Distribution shift detected in features:")
+    for feature in report["distribution_shift"]["shifted_features"]:
+        print(f"  - {feature}")
+
+# Save report
+validator.save_report(report, "results/validation_report.json")
+```
+
+---
+
+## Visualization Suite
+
+Auto-generate comprehensive model performance reports via `src/visualization.py`.
+
+### Generated Charts
+
+| Chart | Description |
+|-------|-------------|
+| Confusion Matrix | Heatmap of TP, TN, FP, FN |
+| ROC Curve | With AUC score annotation |
+| Precision-Recall Curve | With optimal threshold marker |
+| Probability Distribution | By class (fraud vs legitimate) |
+| Feature Importance | Top 20 features ranked |
+
+### Usage
+
+```python
+from src.visualization import ModelVisualizer
+
+visualizer = ModelVisualizer()
+
+# Generate comprehensive report
+saved_files = visualizer.create_comprehensive_report(
+    y_true=y_test,
+    y_pred=y_pred,
+    y_proba=y_proba,
+    metrics={"accuracy": 0.98, "auc_roc": 0.95},
+    feature_importance=importance_df,
+    save_dir="results/visualizations"
+)
+
+# Files created:
+# - confusion_matrix.png
+# - roc_curve.png
+# - precision_recall_curve.png
+# - probability_distribution.png
+# - feature_importance.png
+# - model_report.html (combined report)
+```
+
+### HTML Reports
+
+Self-contained HTML reports with embedded base64 images are automatically generated and logged to MLflow artifacts.
+
+---
+
 ## Local Development
 
 ### Complete Workflow
@@ -274,39 +483,52 @@ pip install -r requirements.txt
 # 2. Download dataset from Kaggle
 # Place train_transaction.csv and train_identity.csv in data/
 
-# 3. Run training
+# 3. Start MLOps infrastructure
+make docker-mlops
+
+# 4. Run training with visualization
 python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
 
-# 4. View MLflow results
-mlflow ui --backend-store-uri sqlite:///mlflow.db
-# Open http://localhost:5000
+# 5. View MLflow results
+open http://localhost:5000
 
-# 5. Run inference
+# 6. Start Streamlit UI
+make serve-ui
+open http://localhost:8501
+
+# 7. Run inference
 python pipelines/inference_pipeline.py
 
-# 6. Generate monitoring reports
+# 8. Generate monitoring reports
 python pipelines/monitoring_pipeline.py
 
-# 7. Start API server
-uvicorn deployment.api.main:app --reload --port 8000
-
-# 8. Test API
-curl http://localhost:8000/health
+# 9. Start API server
+make serve
+open http://localhost:8000/docs
 ```
 
-### Docker Local Development
+### Docker Commands
 
 ```bash
-# Build image
-docker build -f deployment/Dockerfile -t fraud-detection-api .
+# Start all services
+make docker-full
 
-# Run container
-docker run -d -p 8000:8000 -v $(pwd)/models:/app/models fraud-detection-api
+# Start MLOps stack only (MLflow, MinIO, PostgreSQL)
+make docker-mlops
 
-# Full stack with Docker Compose
-docker-compose -f deployment/docker-compose.yml up -d
-# API: http://localhost:8000
-# MLflow: http://localhost:5000
+# Start API + UI only
+make docker-serve
+
+# Start Streamlit UI only
+make docker-ui
+
+# View logs
+make docker-logs
+make docker-logs-mlflow
+make docker-logs-ui
+
+# Stop all services
+make docker-down
 ```
 
 ### Code Quality Checks
@@ -340,37 +562,23 @@ mypy src/ mlops/ pipelines/ --ignore-missing-imports
 ### Option 1: Docker Compose (Self-Hosted)
 
 ```bash
-# Start all services
-docker-compose -f deployment/docker-compose.yml up -d
+# Start all services with profiles
+make docker-full
 
 # Services:
-# - API: http://localhost:8000
+# - Streamlit UI: http://localhost:8501
+# - FastAPI: http://localhost:8000
 # - MLflow: http://localhost:5000
+# - MinIO Console: http://localhost:9001
 
 # Scale API replicas
 docker-compose -f deployment/docker-compose.yml up -d --scale api=3
 
-# View logs
-docker-compose -f deployment/docker-compose.yml logs -f
-
 # Stop services
-docker-compose -f deployment/docker-compose.yml down
+make docker-down
 ```
 
 ### Option 2: GCP Cloud Run
-
-#### Prerequisites
-
-```bash
-# Install Google Cloud SDK
-# https://cloud.google.com/sdk/docs/install
-
-# Authenticate
-gcloud auth login
-gcloud config set project YOUR_PROJECT_ID
-```
-
-#### Step-by-Step Deployment
 
 ```bash
 # 1. Enable required APIs
@@ -384,18 +592,11 @@ gcloud artifacts repositories create fraud-detection \
   --repository-format=docker \
   --location=us-central1
 
-# 3. Configure Docker authentication
-gcloud auth configure-docker us-central1-docker.pkg.dev
-
-# 4. Build and push image
+# 3. Build and push image
 docker build -f deployment/Dockerfile -t us-central1-docker.pkg.dev/PROJECT_ID/fraud-detection/api:latest .
 docker push us-central1-docker.pkg.dev/PROJECT_ID/fraud-detection/api:latest
 
-# 5. Upload model to Cloud Storage
-gsutil mb gs://PROJECT_ID-models
-gsutil cp -r models/* gs://PROJECT_ID-models/
-
-# 6. Deploy to Cloud Run
+# 4. Deploy to Cloud Run
 gcloud run deploy fraud-detection-api \
   --image us-central1-docker.pkg.dev/PROJECT_ID/fraud-detection/api:latest \
   --platform managed \
@@ -405,14 +606,6 @@ gcloud run deploy fraud-detection-api \
   --allow-unauthenticated
 ```
 
-### Environment Configuration
-
-| Environment | Config | RAM | CPU | MLflow Backend |
-|-------------|--------|-----|-----|----------------|
-| Development | `params_codespaces.yaml` | 8GB | Local | SQLite |
-| Staging | `params_production.yaml` | 2GB | 1 | Cloud SQL |
-| Production | `params_production.yaml` | 4GB | 2 | Cloud SQL |
-
 ### Production Checklist
 
 - [ ] Configure GCP project and enable APIs
@@ -421,7 +614,9 @@ gcloud run deploy fraud-detection-api \
 - [ ] Configure GitHub secrets for CI/CD
 - [ ] Upload trained model to Cloud Storage
 - [ ] Deploy API to Cloud Run
+- [ ] Deploy Streamlit UI (optional)
 - [ ] Set up monitoring and alerting
+- [ ] Configure data validation thresholds
 - [ ] Test end-to-end prediction flow
 
 ---
@@ -465,17 +660,6 @@ gcloud run deploy fraud-detection-api \
 | Tag `v*` | Deploy to production |
 | PR to `main` | Run CI checks only |
 
-```bash
-# Deploy to staging (automatic on merge)
-git checkout main
-git merge feature-branch
-git push origin main
-
-# Deploy to production (tag release)
-git tag v1.0.0
-git push origin v1.0.0
-```
-
 ---
 
 ## Infrastructure as Code
@@ -492,17 +676,10 @@ region      = "us-central1"
 environment = "production"
 EOF
 
-# Initialize
+# Initialize and apply
 terraform init
-
-# Plan
 terraform plan
-
-# Apply
 terraform apply
-
-# Destroy
-terraform destroy
 ```
 
 ### Resources Created
@@ -517,82 +694,50 @@ terraform destroy
 
 ---
 
-## API Reference
-
-### Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/` | GET | Root health check |
-| `/health` | GET | Detailed health status |
-| `/predict` | POST | Single transaction prediction |
-| `/predict/batch` | POST | Batch predictions |
-| `/model/info` | GET | Model metadata |
-| `/model/reload` | POST | Reload model from disk |
-
-### Example Requests
-
-```bash
-# Health check
-curl http://localhost:8000/health
-
-# Single prediction
-curl -X POST http://localhost:8000/predict \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transaction": {
-      "TransactionAmt": 150.0,
-      "card1": 12345,
-      "C14": 1.0
-    }
-  }'
-
-# Batch prediction
-curl -X POST http://localhost:8000/predict/batch \
-  -H "Content-Type: application/json" \
-  -d '{
-    "transactions": [
-      {"TransactionAmt": 100.0, "card1": 1234},
-      {"TransactionAmt": 500.0, "card1": 5678}
-    ]
-  }'
-```
-
-### Response Format
-
-```json
-{
-  "is_fraud": false,
-  "fraud_probability": 0.23,
-  "risk_level": "low",
-  "threshold_used": 0.5,
-  "timestamp": "2026-01-20T10:30:00"
-}
-```
-
----
-
 ## Troubleshooting
 
 ### Common Issues
+
+**MinIO connection error:**
+```bash
+# Check MinIO is running
+curl http://localhost:9000/minio/health/live
+
+# Check environment variables
+echo $MLFLOW_S3_ENDPOINT_URL
+echo $AWS_ACCESS_KEY_ID
+```
 
 **MLflow connection error:**
 ```bash
 # Check MLflow server is running
 curl http://localhost:5000/health
 
-# Start if needed
-mlflow server --backend-store-uri sqlite:///mlflow.db --port 5000
+# Start if needed with PostgreSQL backend
+docker-compose -f deployment/docker-compose.yml --profile mlflow up -d
+```
+
+**Streamlit UI not loading models:**
+```bash
+# Check MLflow connection
+curl http://localhost:5000/api/2.0/mlflow/experiments/list
+
+# Verify model files exist
+ls -la models/
+# Expected: xgb_model.joblib, lgbm_model.joblib, catboost_model.cbm,
+#           meta_learner.joblib, feature_names.json
 ```
 
 **Model not loading:**
 ```bash
 # Verify model files exist
 ls -la models/
-# Expected: xgb_model.joblib, lgbm_model.joblib, catboost_model.cbm, meta_learner.joblib, feature_names.json
 
 # Check permissions
 chmod 755 models/*
+
+# Manually reload model in API
+curl -X POST http://localhost:8000/model/reload
 ```
 
 **Memory error during training:**
@@ -601,38 +746,38 @@ chmod 755 models/*
 python pipelines/training_pipeline.py --config-path config/params_codespaces.yaml
 ```
 
-**Docker build fails:**
+**Data validation failures:**
 ```bash
-# Build with verbose output
-docker build -f deployment/Dockerfile -t test . --progress=plain --no-cache
-```
+# Check validation report
+python -c "
+from src.validation import DataValidator
+import pandas as pd
 
-**API returns 503:**
-```bash
-# Check logs
-docker logs fraud-api
-
-# Manually reload model
-curl -X POST http://localhost:8000/model/reload
-```
-
-**Evidently import error:**
-```bash
-# Ensure correct version is installed
-pip install evidently>=0.7.0
+df = pd.read_csv('data/train_transaction.csv', nrows=1000)
+validator = DataValidator()
+is_valid, report = validator.validate_for_training(df)
+print(f'Valid: {is_valid}')
+print(f'Issues: {report[\"total_issues\"]}')
+"
 ```
 
 ### Logs and Debugging
 
 ```bash
 # API logs
-docker logs -f fraud-api
+docker-compose -f deployment/docker-compose.yml logs -f api
+
+# Streamlit UI logs
+docker-compose -f deployment/docker-compose.yml logs -f streamlit-ui
+
+# MLflow logs
+docker-compose -f deployment/docker-compose.yml logs -f mlflow
+
+# MinIO logs
+docker-compose -f deployment/docker-compose.yml logs -f minio
 
 # Prefect flow logs
 prefect flow-run logs <run-id>
-
-# MLflow experiments
-mlflow ui --backend-store-uri sqlite:///mlflow.db
 
 # Monitoring reports
 ls -la monitoring/evidently_reports/
@@ -643,8 +788,10 @@ ls -la monitoring/evidently_reports/
 ## References
 
 - [MLflow Documentation](https://mlflow.org/docs/latest/index.html)
+- [MinIO Documentation](https://min.io/docs/minio/linux/index.html)
 - [Prefect Documentation](https://docs.prefect.io/)
 - [Evidently Documentation](https://docs.evidentlyai.com/)
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Streamlit Documentation](https://docs.streamlit.io/)
 - [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest/docs)
 - [GCP Cloud Run Documentation](https://cloud.google.com/run/docs)
