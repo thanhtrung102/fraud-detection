@@ -145,40 +145,40 @@ docker-build:
 
 # Start all services (MLflow, Prefect, API, UI, MinIO)
 docker-full:
-	docker-compose -f deployment/docker-compose.yml --profile full up -d
+	docker compose -f deployment/docker-compose.yml --profile full up -d
 
 # Start API + UI only (requires MLflow to be running)
 docker-serve:
-	docker-compose -f deployment/docker-compose.yml --profile api --profile ui up -d
+	docker compose -f deployment/docker-compose.yml --profile api --profile ui up -d
 
 # Start MLOps stack (MLflow + MinIO + PostgreSQL)
 docker-mlops:
-	docker-compose -f deployment/docker-compose.yml --profile mlflow up -d
+	docker compose -f deployment/docker-compose.yml --profile mlflow up -d
 
 # Start Prefect orchestration
 docker-prefect:
-	docker-compose -f deployment/docker-compose.yml --profile prefect up -d
+	docker compose -f deployment/docker-compose.yml --profile prefect up -d
 
 # Start Streamlit UI only
 docker-ui:
-	docker-compose -f deployment/docker-compose.yml --profile ui up -d
+	docker compose -f deployment/docker-compose.yml --profile ui up -d
 
 # Legacy: Start with old behavior (no profiles)
 docker-up:
-	docker-compose -f deployment/docker-compose.yml --profile full up -d
+	docker compose -f deployment/docker-compose.yml --profile full up -d
 
 docker-down:
-	docker-compose -f deployment/docker-compose.yml --profile full down
-	docker-compose -f deployment/docker-compose.yml down --remove-orphans
+	docker compose -f deployment/docker-compose.yml --profile full down
+	docker compose -f deployment/docker-compose.yml down --remove-orphans
 
 docker-logs:
-	docker-compose -f deployment/docker-compose.yml logs -f
+	docker compose -f deployment/docker-compose.yml logs -f
 
 docker-logs-mlflow:
-	docker-compose -f deployment/docker-compose.yml logs -f mlflow
+	docker compose -f deployment/docker-compose.yml logs -f mlflow
 
 docker-logs-ui:
-	docker-compose -f deployment/docker-compose.yml logs -f streamlit-ui
+	docker compose -f deployment/docker-compose.yml logs -f streamlit-ui
 
 docker-push:
 	@echo "Push to your container registry:"
@@ -187,11 +187,11 @@ docker-push:
 
 # Run training in Docker
 docker-train:
-	docker-compose -f deployment/docker-compose.yml --profile training up
+	docker compose -f deployment/docker-compose.yml --profile training up
 
 # Run monitoring in Docker
 docker-monitor:
-	docker-compose -f deployment/docker-compose.yml --profile monitoring up
+	docker compose -f deployment/docker-compose.yml --profile monitoring up
 
 # =============================================================================
 # Infrastructure (Terraform)
