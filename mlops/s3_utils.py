@@ -7,7 +7,6 @@ Utilities for managing MLflow artifacts in S3-compatible storage (MinIO).
 
 import logging
 import os
-import shutil
 import tempfile
 from pathlib import Path
 from typing import Any, Optional

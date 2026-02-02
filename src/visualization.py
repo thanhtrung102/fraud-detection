@@ -323,7 +323,7 @@ class ModelVisualizer:
         fig, ax = plt.subplots(figsize=(10, 8))
 
         colors = plt.cm.viridis(np.linspace(0.3, 0.9, len(df)))
-        bars = ax.barh(df["feature"], df["importance"], color=colors, edgecolor="black", alpha=0.8)
+        ax.barh(df["feature"], df["importance"], color=colors, edgecolor="black", alpha=0.8)
 
         ax.set_xlabel("Importance", fontsize=12)
         ax.set_ylabel("Feature", fontsize=12)
